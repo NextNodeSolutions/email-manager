@@ -1,41 +1,80 @@
 /**
- * Type definitions for the library
+ * Type definitions for @nextnode/email-manager
+ * Barrel export for all type definitions
  */
 
-/**
- * Configuration options for the client
- */
+// Legacy types (to be removed in cleanup)
+// TODO: Remove after deleting old core.ts
 export interface ClientConfig {
-  /** API key for authentication */
-  apiKey?: string
-  /** Base URL for API requests */
-  baseUrl?: string
-  /** Request timeout in milliseconds */
-  timeout?: number
+	apiKey?: string
+	baseUrl?: string
+	timeout?: number
 }
 
-/**
- * Response interface for API calls
- */
-export interface ApiResponse<T = unknown> {
-  /** Whether the request was successful */
-  success: boolean
-  /** Response data (if successful) */
-  data?: T
-  /** Error message (if failed) */
-  error?: string
-  /** HTTP status code */
-  statusCode: number
-}
+// Email types
+export type {
+	EmailRecipient,
+	EmailAttachment,
+	EmailHeader,
+	EmailTag,
+	EmailMessage,
+	EmailTemplateComponent,
+	TemplatedEmailMessage,
+} from './email.js'
 
-/**
- * Generic error interface
- */
-export interface LibraryError {
-  /** Error code */
-  code: string
-  /** Human-readable error message */
-  message: string
-  /** Optional error details */
-  details?: Record<string, unknown>
-}
+// Result types (discriminated unions)
+export type {
+	Result,
+	EmailErrorCode,
+	EmailError,
+	SendSuccess,
+	SendResult,
+	BatchSendSuccess,
+	BatchSendResult,
+} from './result.js'
+
+// Provider types (Strategy pattern)
+export type {
+	ProviderConfig,
+	EmailProvider,
+	ProviderFactory,
+} from './provider.js'
+
+// Queue types
+export type {
+	QueueJobStatus,
+	QueueJob,
+	QueueOptions,
+	QueueStats,
+	QueueEventType,
+	QueueEventHandler,
+	EmailQueue,
+} from './queue.js'
+
+// Template types
+export type {
+	TemplateRenderOptions,
+	RenderedTemplate,
+	TemplateEntry,
+	TemplateMap,
+} from './template.js'
+
+// Webhook types
+export type {
+	WebhookEventType,
+	WebhookEventData,
+	WebhookEventBase,
+	EmailSentEvent,
+	EmailDeliveredEvent,
+	EmailDeliveryDelayedEvent,
+	BounceInfo,
+	EmailBouncedEvent,
+	EmailComplainedEvent,
+	TrackingEventData,
+	EmailOpenedEvent,
+	EmailClickedEvent,
+	WebhookEvent,
+	WebhookHandler,
+	WebhookVerifyOptions,
+	WebhookError,
+} from './webhook.js'
