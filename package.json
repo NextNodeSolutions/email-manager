@@ -4,19 +4,25 @@
   "description": "A TypeScript email management library providing unified email sending, template management, and comprehensive error handling for NextNode projects",
   "keywords": [
     "email",
-    "smtp",
-    "templates",
-    "nodemailer",
-    "typescript",
-    "nextnode",
     "mail",
     "messaging",
-    "notifications"
+    "nextnode",
+    "nodemailer",
+    "notifications",
+    "smtp",
+    "templates",
+    "typescript"
   ],
   "license": "MIT",
   "author": "NextNodeSolutions",
+  "files": [
+    "CHANGELOG.md",
+    "README.md",
+    "dist/**/*"
+  ],
   "main": "./dist/index.js",
   "scripts": {
+    "prebuild": "pnpm clean",
     "build": "tsc -p tsconfig.build.json && tsc-alias -p tsconfig.build.json",
     "changeset": "changeset",
     "changeset:publish": "changeset publish",
@@ -26,7 +32,6 @@
     "format": "biome check --write --no-errors-on-unmatched .",
     "lint": "eslint . --max-warnings 0 --fix",
     "lint-staged": "lint-staged",
-    "prebuild": "pnpm clean",
     "prepare": "husky",
     "prepublishOnly": "pnpm build",
     "test": "vitest run",
@@ -36,7 +41,8 @@
     "type-check": "tsc --noEmit"
   },
   "dependencies": {
-    "@nextnode/logger": "^0.2.4"
+    "@nextnode/logger": "^0.2.4",
+    "resend": "^6.6.0"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.2.3",
@@ -63,11 +69,6 @@
   },
   "packageManager": "pnpm@10.11.0",
   "type": "module",
-  "files": [
-    "CHANGELOG.md",
-    "README.md",
-    "dist/**/*"
-  ],
   "exports": {
     ".": {
       "import": "./dist/index.js",
