@@ -3,14 +3,6 @@
  * Barrel export for all type definitions
  */
 
-// Legacy types (to be removed in cleanup)
-// TODO: Remove after deleting old core.ts
-export interface ClientConfig {
-	apiKey?: string
-	baseUrl?: string
-	timeout?: number
-}
-
 // Email types
 export type {
 	EmailRecipient,

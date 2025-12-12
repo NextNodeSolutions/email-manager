@@ -79,8 +79,8 @@ describe('Memory Queue', () => {
 			const jobs = await queue.addBatch(messages)
 
 			expect(jobs).toHaveLength(2)
-			expect(jobs[0].status).toBe('pending')
-			expect(jobs[1].status).toBe('pending')
+			expect(jobs[0]?.status).toBe('pending')
+			expect(jobs[1]?.status).toBe('pending')
 		})
 
 		it('should get job by ID', async () => {
