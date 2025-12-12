@@ -33,13 +33,13 @@ export interface QueueJob {
 	/** Created timestamp */
 	createdAt: Date
 	/** Last attempt timestamp */
-	lastAttemptAt?: Date
+	lastAttemptAt?: Date | undefined
 	/** Scheduled for timestamp */
-	scheduledFor?: Date
+	scheduledFor?: Date | undefined
 	/** Result if completed/failed */
-	result?: SendResult
+	result?: SendResult | undefined
 	/** Error message if failed */
-	error?: string
+	error?: string | undefined
 }
 
 /**
