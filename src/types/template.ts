@@ -22,7 +22,7 @@ export interface RenderedTemplate {
 	/** HTML content */
 	html: string
 	/** Plain text content (if generated) */
-	text?: string
+	text?: string | undefined
 }
 
 /**
