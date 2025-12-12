@@ -102,7 +102,7 @@ export interface EmailQueue {
 	/** Add single email to queue */
 	add(
 		message: EmailMessage,
-		options?: { scheduledFor?: Date },
+		options?: { scheduledFor?: Date | undefined },
 	): Promise<QueueJob>
 
 	/** Add multiple emails to queue */

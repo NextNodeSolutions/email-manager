@@ -47,23 +47,23 @@ export interface EmailMessage {
 	/** Email subject */
 	subject: string
 	/** CC recipients */
-	cc?: EmailRecipient | EmailRecipient[]
+	cc?: EmailRecipient | EmailRecipient[] | undefined
 	/** BCC recipients */
-	bcc?: EmailRecipient | EmailRecipient[]
+	bcc?: EmailRecipient | EmailRecipient[] | undefined
 	/** Reply-to address(es) */
-	replyTo?: EmailRecipient | EmailRecipient[]
+	replyTo?: EmailRecipient | EmailRecipient[] | undefined
 	/** HTML content */
-	html?: string
+	html?: string | undefined
 	/** Plain text content (auto-generated from HTML if omitted) */
-	text?: string
+	text?: string | undefined
 	/** File attachments */
-	attachments?: EmailAttachment[]
+	attachments?: EmailAttachment[] | undefined
 	/** Custom headers */
-	headers?: EmailHeader[]
+	headers?: EmailHeader[] | undefined
 	/** Tags for tracking */
-	tags?: EmailTag[]
+	tags?: EmailTag[] | undefined
 	/** Schedule send time (ISO 8601 or Date) */
-	scheduledAt?: string | Date
+	scheduledAt?: string | Date | undefined
 }
 
 /**
