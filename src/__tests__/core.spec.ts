@@ -8,7 +8,7 @@ import { createClient, validateConfig, processData } from '../lib/core.js'
 
 // Mock the logger
 vi.mock('../utils/logger.js', () => ({
-	coreLogger: {
+	logger: {
 		info: vi.fn(),
 	},
 	logError: vi.fn(),

@@ -6,11 +6,12 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 
 import {
 	logger,
-	apiLogger,
-	coreLogger,
-	utilsLogger,
+	providerLogger,
+	queueLogger,
+	webhookLogger,
+	templateLogger,
 	logDebug,
-	logApiResponse,
+	logProviderResponse,
 	logError,
 } from '../utils/logger.js'
 
@@ -43,9 +44,10 @@ describe('Logger Utilities', () => {
 		})
 
 		it('should create specialized loggers', () => {
-			expect(apiLogger).toBeDefined()
-			expect(coreLogger).toBeDefined()
-			expect(utilsLogger).toBeDefined()
+			expect(providerLogger).toBeDefined()
+			expect(queueLogger).toBeDefined()
+			expect(webhookLogger).toBeDefined()
+			expect(templateLogger).toBeDefined()
 		})
 	})
 
@@ -74,34 +76,37 @@ describe('Logger Utilities', () => {
 		})
 	})
 
-	describe('logApiResponse', () => {
-		it('should log API response without data', () => {
-			logApiResponse('get', '/api/users', 200)
+	describe('logProviderResponse', () => {
+		it('should log provider response without data', () => {
+			logProviderResponse('get', '/emails', 200)
 
-			expect(apiLogger.info).toHaveBeenCalledWith('GET /api/users', {
+			expect(providerLogger.info).toHaveBeenCalledWith('GET /emails', {
 				status: 200,
 				details: { status: 200 },
 			})
 		})
 
-		it('should log API response with data', () => {
-			const responseData = { users: [{ id: 1, name: 'John' }] }
+		it('should log provider response with data', () => {
+			const responseData = { id: 'msg_123', status: 'sent' }
 
-			logApiResponse('post', '/api/users', 201, responseData)
+			logProviderResponse('post', '/emails', 201, responseData)
 
-			expect(apiLogger.info).toHaveBeenCalledWith('POST /api/users', {
+			expect(providerLogger.info).toHaveBeenCalledWith('POST /emails', {
 				status: 201,
 				details: { status: 201, data: responseData },
 			})
 		})
 
 		it('should handle different HTTP methods', () => {
-			logApiResponse('delete', '/api/users/1', 204)
+			logProviderResponse('delete', '/emails/123', 204)
 
-			expect(apiLogger.info).toHaveBeenCalledWith('DELETE /api/users/1', {
-				status: 204,
-				details: { status: 204 },
-			})
+			expect(providerLogger.info).toHaveBeenCalledWith(
+				'DELETE /emails/123',
+				{
+					status: 204,
+					details: { status: 204 },
+				},
+			)
 		})
 	})
 

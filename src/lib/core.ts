@@ -1,8 +1,9 @@
 /**
  * Core library functionality
+ * @deprecated This is placeholder code - will be removed
  */
 
-import { coreLogger, logError } from '../utils/logger.js'
+import { logger, logError } from '../utils/logger.js'
 
 import type { ClientConfig } from '../types/index.js'
 
@@ -13,7 +14,7 @@ import type { ClientConfig } from '../types/index.js'
 export const createClient = (
 	options: ClientConfig = {},
 ): { apiKey?: string; baseUrl?: string } => {
-	coreLogger.info('Creating client instance', {
+	logger.info('Creating client instance', {
 		details: {
 			hasApiKey: Boolean(options.apiKey),
 			baseUrl: options.baseUrl || 'default',
@@ -26,7 +27,7 @@ export const createClient = (
 			...(options.baseUrl && { baseUrl: options.baseUrl }),
 		}
 
-		coreLogger.info('Client created successfully')
+		logger.info('Client created successfully')
 		return client
 	} catch (error) {
 		logError(error, { options })
@@ -43,7 +44,7 @@ export const validateConfig = (
 	const isValid =
 		typeof config === 'object' && config !== null && !Array.isArray(config)
 
-	coreLogger.info('Config validation', {
+	logger.info('Config validation', {
 		details: {
 			isValid,
 			type: typeof config,
@@ -58,7 +59,7 @@ export const validateConfig = (
  * Example async function with proper error logging
  */
 export const processData = async (data: unknown[]): Promise<unknown[]> => {
-	coreLogger.info('Processing data', { details: { itemCount: data.length } })
+	logger.info('Processing data', { details: { itemCount: data.length } })
 
 	try {
 		// Simulate some processing
@@ -68,7 +69,7 @@ export const processData = async (data: unknown[]): Promise<unknown[]> => {
 			timestamp: Date.now(),
 		}))
 
-		coreLogger.info('Data processing completed', {
+		logger.info('Data processing completed', {
 			details: {
 				inputCount: data.length,
 				outputCount: processed.length,

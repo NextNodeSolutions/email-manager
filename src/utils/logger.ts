@@ -1,23 +1,31 @@
 /**
- * Logger utility for {{project_name}}
+ * Logger utility for @nextnode/email-manager
  * Centralized logging with @nextnode/logger
  */
 
 import { createLogger } from '@nextnode/logger'
 
+/** Main library logger */
 export const logger = createLogger()
 
-// Specialized loggers for different modules (examples)
-export const apiLogger = createLogger({
-	prefix: 'API',
+/** Provider operations logger */
+export const providerLogger = createLogger({
+	prefix: 'PROVIDER',
 })
 
-export const coreLogger = createLogger({
-	prefix: 'CORE',
+/** Queue operations logger */
+export const queueLogger = createLogger({
+	prefix: 'QUEUE',
 })
 
-export const utilsLogger = createLogger({
-	prefix: 'UTILS',
+/** Webhook operations logger */
+export const webhookLogger = createLogger({
+	prefix: 'WEBHOOK',
+})
+
+/** Template rendering logger */
+export const templateLogger = createLogger({
+	prefix: 'TEMPLATE',
 })
 
 /**
@@ -30,20 +38,20 @@ export const logDebug = (label: string, data: unknown): void => {
 }
 
 /**
- * Log helper for API responses
+ * Log helper for provider API responses
  * @param method - HTTP method
- * @param url - Request URL
+ * @param endpoint - API endpoint
  * @param status - Response status
  * @param data - Response data
  */
-export const logApiResponse = (
+export const logProviderResponse = (
 	method: string,
-	url: string,
+	endpoint: string,
 	status: number,
 	data?: unknown,
 ): void => {
 	const responseDetails = data ? { status, data } : { status }
-	apiLogger.info(`${method.toUpperCase()} ${url}`, {
+	providerLogger.info(`${method.toUpperCase()} ${endpoint}`, {
 		status,
 		details: responseDetails,
 	})
