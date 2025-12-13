@@ -6,11 +6,11 @@ This project uses [Changesets](https://github.com/changesets/changesets) for aut
 
 Changesets provide a way to manage versions and changelogs with a focus on multi-package repositories. This setup includes:
 
-- ✅ **Automated versioning** - No more manual version bumps  
-- ✅ **Consistent changelogs** - Generated from changeset descriptions  
-- ✅ **PR validation** - Ensures all changes are tracked  
-- ✅ **Automatic publishing** - New versions published to npm automatically  
-- ✅ **GitHub integration** - Changelogs link to PRs and commits  
+- ✅ **Automated versioning** - No more manual version bumps
+- ✅ **Consistent changelogs** - Generated from changeset descriptions
+- ✅ **PR validation** - Ensures all changes are tracked
+- ✅ **Automatic publishing** - New versions published to npm automatically
+- ✅ **GitHub integration** - Changelogs link to PRs and commits
 
 ## How It Works
 
@@ -18,13 +18,13 @@ Changesets provide a way to manage versions and changelogs with a focus on multi
 
 1. **Make your changes** to the codebase
 2. **Create a changeset** by running:
-   ```bash
-   pnpm changeset
-   ```
+    ```bash
+    pnpm changeset
+    ```
 3. **Follow the prompts**:
-   - Select the package (`@nextnode/eslint-plugin`)
-   - Choose version bump type (patch/minor/major)
-   - Write a description of your changes
+    - Select the package (`@nextnode/eslint-plugin`)
+    - Choose version bump type (patch/minor/major)
+    - Write a description of your changes
 4. **Commit the changeset file** with your changes
 5. **Create a Pull Request**
 
@@ -32,8 +32,8 @@ Changesets provide a way to manage versions and changelogs with a focus on multi
 
 1. **PR Check**: The `changeset-check` workflow ensures every PR includes a changeset
 2. **On Merge to Main**: The `release` workflow automatically:
-   - Creates a "Version Packages" PR with version bumps and changelog updates
-   - When that PR is merged, publishes the new version to npm
+    - Creates a "Version Packages" PR with version bumps and changelog updates
+    - When that PR is merged, publishes the new version to npm
 
 ## Creating a Changeset
 
@@ -44,11 +44,12 @@ pnpm changeset
 ```
 
 This interactive command will:
+
 1. Ask which packages should be bumped (select `@nextnode/eslint-plugin`)
 2. Ask what type of change this is:
-   - **patch**: Bug fixes, small improvements
-   - **minor**: New features, non-breaking changes
-   - **major**: Breaking changes
+    - **patch**: Bug fixes, small improvements
+    - **minor**: New features, non-breaking changes
+    - **major**: Breaking changes
 3. Ask for a summary of the changes
 
 This creates a markdown file in `.changeset/` that should be committed with your changes.
@@ -87,18 +88,22 @@ git push origin feature/new-rule
 The following has been configured for this project:
 
 #### Dependencies
+
 - `@changesets/cli` - Core changeset functionality
 - `@changesets/changelog-github` - GitHub-integrated changelog generation
 
 #### Configuration Files
+
 - `.changeset/config.json` - Changeset configuration
 - This documentation file
 
 #### GitHub Workflows
+
 - `.github/workflows/release.yml` - Automated versioning and publishing
 - `.github/workflows/changeset-check.yml` - Ensures PRs include changesets
 
 #### Package.json Scripts
+
 - `pnpm changeset` - Create a new changeset
 - `pnpm changeset:version` - Apply changesets and bump versions
 - `pnpm changeset:publish` - Publish to npm
@@ -134,6 +139,7 @@ pnpm changeset:publish
 ### Testing the Workflow
 
 You can test the changeset workflow by:
+
 1. Creating a small documentation change
 2. Running `pnpm changeset` and selecting "patch"
 3. Creating a PR to see the validation in action
