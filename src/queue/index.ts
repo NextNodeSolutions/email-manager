@@ -3,23 +3,9 @@
  * Creates queue instances based on backend configuration
  */
 
-import { createMemoryQueue } from "./memory-queue.js";
-
-import type {
-  EmailProvider,
-  EmailQueue,
-  QueueOptions,
-  QueueBackendConfig,
-} from "../types/index.js";
-
-/**
- * SQLite queue creator function type
- */
-type SQLiteQueueCreator = (
-  provider: EmailProvider,
-  options: QueueOptions,
-  backendConfig: Extract<QueueBackendConfig, { backend: "sqlite" }>,
-) => EmailQueue;
+import type { EmailProvider, EmailQueue, QueueOptions } from '../types/index.js'
+import { createMemoryQueue } from './memory-queue.js'
+import { createSQLiteQueue } from './sqlite-queue.js'
 
 /**
  * Create an email queue with the specified backend
@@ -44,23 +30,17 @@ type SQLiteQueueCreator = (
  * ```
  */
 export const createQueue = (
-  provider: EmailProvider,
-  options: QueueOptions = {},
+	provider: EmailProvider,
+	options: QueueOptions = {},
 ): EmailQueue => {
-  const backendConfig = options.backendConfig ?? { backend: "memory" };
+	const backendConfig = options.backendConfig ?? { backend: 'memory' }
 
-  switch (backendConfig.backend) {
-    case "sqlite": {
-      // Dynamic import to avoid loading node:sqlite when not needed
-      // eslint-disable-next-line @typescript-eslint/no-require-imports
-      const { createSQLiteQueue } = require("./sqlite-queue.js") as {
-        createSQLiteQueue: SQLiteQueueCreator;
-      };
-      return createSQLiteQueue(provider, options, backendConfig);
-    }
-    default:
-      return createMemoryQueue(provider, options);
-  }
-};
+	switch (backendConfig.backend) {
+		case 'sqlite':
+			return createSQLiteQueue(provider, backendConfig, options)
+		default:
+			return createMemoryQueue(provider, options)
+	}
+}
 
-export { createMemoryQueue } from "./memory-queue.js";
+export { createMemoryQueue } from './memory-queue.js'

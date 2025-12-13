@@ -1,8 +1,4 @@
 {
-  "*.{js,jsx,ts,tsx}": ["biome lint --write"],
-  "package.json": ["better-sort-package-json"],
-  "*": [
-    "biome check --write --no-errors-on-unmatched",
-    "prettier --write --ignore-unknown"
-  ]
+	"package.json": ["better-sort-package-json"],
+	"*": ["pnpm lint", "pnpm format"]
 }

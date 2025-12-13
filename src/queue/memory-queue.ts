@@ -3,37 +3,37 @@
  * Queue implementation with retry logic, rate limiting, and event system
  */
 
-import { randomUUID } from "node:crypto";
+import { randomUUID } from 'node:crypto'
 
 import type {
-  EmailQueue,
-  QueueJob,
-  QueueOptions,
-  QueueStats,
-  QueueEventType,
-  QueueEventHandler,
-  EmailMessage,
-  EmailProvider,
-  JobFilterOptions,
-} from "../types/index.js";
+	EmailMessage,
+	EmailProvider,
+	EmailQueue,
+	JobFilterOptions,
+	QueueEventHandler,
+	QueueEventType,
+	QueueJob,
+	QueueOptions,
+	QueueStats,
+} from '../types/index.js'
 
 /**
  * Default queue options (core processing options only)
  */
 const DEFAULT_OPTIONS = {
-  concurrency: 5,
-  maxRetries: 3,
-  retryDelay: 1000,
-  maxRetryDelay: 60000,
-  rateLimit: 10, // 10 emails per second
-  batchSize: 10,
-} as const;
+	concurrency: 5,
+	maxRetries: 3,
+	retryDelay: 1000,
+	maxRetryDelay: 60000,
+	rateLimit: 10, // 10 emails per second
+	batchSize: 10,
+} as const
 
 /**
  * Simple delay utility
  */
 const delay = (ms: number): Promise<void> =>
-  new Promise((resolve) => setTimeout(resolve, ms));
+	new Promise(resolve => setTimeout(resolve, ms))
 
 /**
  * Create an in-memory email queue
@@ -55,300 +55,325 @@ const delay = (ms: number): Promise<void> =>
  * ```
  */
 export const createMemoryQueue = (
-  provider: EmailProvider,
-  options: QueueOptions = {},
+	provider: EmailProvider,
+	options: QueueOptions = {},
 ): EmailQueue => {
-  const config = { ...DEFAULT_OPTIONS, ...options };
-  const jobs = new Map<string, QueueJob>();
-  const pending: string[] = [];
-  const eventHandlers = new Map<QueueEventType, Set<QueueEventHandler>>();
+	const config = { ...DEFAULT_OPTIONS, ...options }
+	const jobs = new Map<string, QueueJob>()
+	const pending: string[] = []
+	const eventHandlers = new Map<QueueEventType, Set<QueueEventHandler>>()
 
-  let isRunning = false;
-  let isPaused = false;
-  let activeCount = 0;
-  let lastSendTime = 0;
+	let isRunning = false
+	let isPaused = false
+	let activeCount = 0
+	let lastSendTime = 0
 
-  /**
-   * Emit event to all registered handlers
-   */
-  const emit = <T>(event: QueueEventType, data: T): void => {
-    const handlers = eventHandlers.get(event);
-    handlers?.forEach((handler) => {
-      try {
-        handler(data);
-      } catch {
-        // Silently ignore handler errors
-      }
-    });
-  };
+	/**
+	 * Emit event to all registered handlers
+	 */
+	const emit = <T>(event: QueueEventType, data: T): void => {
+		const handlers = eventHandlers.get(event)
+		handlers?.forEach(handler => {
+			try {
+				handler(data)
+			} catch {
+				// Silently ignore handler errors
+			}
+		})
+	}
 
-  /**
-   * Calculate exponential backoff delay with jitter
-   */
-  const calculateBackoff = (attempt: number): number => {
-    const baseDelay = config.retryDelay * 2 ** (attempt - 1);
-    // Add jitter (0-25% of delay)
-    const jitter = baseDelay * Math.random() * 0.25;
-    return Math.min(baseDelay + jitter, config.maxRetryDelay);
-  };
+	/**
+	 * Calculate exponential backoff delay with jitter
+	 */
+	const calculateBackoff = (attempt: number): number => {
+		const baseDelay = config.retryDelay * 2 ** (attempt - 1)
+		// Add jitter (0-25% of delay)
+		const jitter = baseDelay * Math.random() * 0.25
+		return Math.min(baseDelay + jitter, config.maxRetryDelay)
+	}
 
-  /**
-   * Wait for rate limit
-   */
-  const waitForRateLimit = async (): Promise<void> => {
-    const minInterval = 1000 / config.rateLimit;
-    const elapsed = Date.now() - lastSendTime;
-    if (elapsed < minInterval) {
-      await delay(minInterval - elapsed);
-    }
-    lastSendTime = Date.now();
-  };
+	/**
+	 * Wait for rate limit
+	 */
+	const waitForRateLimit = async (): Promise<void> => {
+		const minInterval = 1000 / config.rateLimit
+		const elapsed = Date.now() - lastSendTime
+		if (elapsed < minInterval) {
+			await delay(minInterval - elapsed)
+		}
+		lastSendTime = Date.now()
+	}
 
-  /**
-   * Get synchronous stats
-   */
-  const getStatsSync = (): QueueStats => {
-    let pendingCount = 0;
-    let processingCount = 0;
-    let completedCount = 0;
-    let failedCount = 0;
-    let retryingCount = 0;
+	/**
+	 * Get synchronous stats
+	 */
+	const getStatsSync = (): QueueStats => {
+		let pendingCount = 0
+		let processingCount = 0
+		let completedCount = 0
+		let failedCount = 0
+		let retryingCount = 0
 
-    for (const job of jobs.values()) {
-      switch (job.status) {
-        case "pending":
-          pendingCount += 1;
-          break;
-        case "processing":
-          processingCount += 1;
-          break;
-        case "completed":
-          completedCount += 1;
-          break;
-        case "failed":
-          failedCount += 1;
-          break;
-        case "retrying":
-          retryingCount += 1;
-          break;
-      }
-    }
+		for (const job of jobs.values()) {
+			switch (job.status) {
+				case 'pending':
+					pendingCount += 1
+					break
+				case 'processing':
+					processingCount += 1
+					break
+				case 'completed':
+					completedCount += 1
+					break
+				case 'failed':
+					failedCount += 1
+					break
+				case 'retrying':
+					retryingCount += 1
+					break
+			}
+		}
 
-    return {
-      total: jobs.size,
-      pending: pendingCount,
-      processing: processingCount,
-      completed: completedCount,
-      failed: failedCount,
-      retrying: retryingCount,
-    };
-  };
+		return {
+			total: jobs.size,
+			pending: pendingCount,
+			processing: processingCount,
+			completed: completedCount,
+			failed: failedCount,
+			retrying: retryingCount,
+		}
+	}
 
-  /**
-   * Process next job in queue
-   */
-  const processNext = (): void => {
-    if (!isRunning || isPaused) return;
-    if (activeCount >= config.concurrency) return;
-    if (pending.length === 0) {
-      if (activeCount === 0) {
-        emit("queue:drained", { stats: getStatsSync() });
-      }
-      return;
-    }
+	/**
+	 * Check if queue can process more jobs
+	 */
+	const canProcessMore = (): boolean => {
+		if (!isRunning || isPaused) return false
+		if (activeCount >= config.concurrency) return false
+		return true
+	}
 
-    const jobId = pending.shift();
-    if (!jobId) return;
+	/**
+	 * Handle scheduled job - returns true if job was scheduled for later
+	 */
+	const scheduleForLater = (jobId: string, job: QueueJob): boolean => {
+		if (!job.scheduledFor || job.scheduledFor <= new Date()) return false
 
-    const job = jobs.get(jobId);
-    if (!job) return;
+		const delayMs = job.scheduledFor.getTime() - Date.now()
+		setTimeout(() => {
+			pending.push(jobId)
+			processNext()
+		}, delayMs)
+		return true
+	}
 
-    // Check if scheduled for future
-    if (job.scheduledFor && job.scheduledFor > new Date()) {
-      const delayMs = job.scheduledFor.getTime() - Date.now();
-      setTimeout(() => {
-        pending.push(jobId);
-        processNext();
-      }, delayMs);
-      return;
-    }
+	/**
+	 * Process next job in queue
+	 */
+	const processNext = (): void => {
+		if (!canProcessMore()) return
 
-    activeCount += 1;
-    processJob(jobId);
-  };
+		if (pending.length === 0) {
+			if (activeCount === 0) {
+				emit('queue:drained', { stats: getStatsSync() })
+			}
+			return
+		}
 
-  /**
-   * Process a single job
-   */
-  const processJob = async (jobId: string): Promise<void> => {
-    const job = jobs.get(jobId);
-    if (!job || job.status === "completed") {
-      activeCount -= 1;
-      processNext();
-      return;
-    }
+		const jobId = pending.shift()
+		if (!jobId) return
 
-    job.status = "processing";
-    job.attempts += 1;
-    job.lastAttemptAt = new Date();
+		const job = jobs.get(jobId)
+		if (!job) return
 
-    emit("job:processing", { job });
+		if (scheduleForLater(jobId, job)) return
 
-    try {
-      await waitForRateLimit();
-      const result = await provider.send(job.message);
+		activeCount += 1
+		processJob(jobId)
+	}
 
-      if (result.success) {
-        job.status = "completed";
-        job.result = result;
-        emit("job:completed", { job, result });
-      } else {
-        throw new Error(result.error.message);
-      }
-    } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : "Unknown error";
+	/**
+	 * Process a single job
+	 */
+	const processJob = async (jobId: string): Promise<void> => {
+		const job = jobs.get(jobId)
+		if (!job || job.status === 'completed') {
+			activeCount -= 1
+			processNext()
+			return
+		}
 
-      if (job.attempts < job.maxRetries) {
-        job.status = "retrying";
-        job.error = errorMessage;
-        const backoffDelay = calculateBackoff(job.attempts);
+		job.status = 'processing'
+		job.attempts += 1
+		job.lastAttemptAt = new Date()
 
-        emit("job:retry", { job, nextRetryIn: backoffDelay });
+		emit('job:processing', { job })
 
-        // Schedule retry
-        setTimeout(() => {
-          if (isRunning && !isPaused) {
-            pending.push(jobId);
-            processNext();
-          }
-        }, backoffDelay);
-      } else {
-        job.status = "failed";
-        job.error = errorMessage;
-        emit("job:failed", { job, error: errorMessage });
-      }
-    } finally {
-      activeCount -= 1;
-      processNext();
-    }
-  };
+		try {
+			await waitForRateLimit()
+			const result = await provider.send(job.message)
 
-  return {
-    async add(
-      message: EmailMessage,
-      addOptions: { scheduledFor?: Date } = {},
-    ): Promise<QueueJob> {
-      const job: QueueJob = {
-        id: randomUUID(),
-        message,
-        status: "pending",
-        attempts: 0,
-        maxRetries: config.maxRetries,
-        createdAt: new Date(),
-        scheduledFor: addOptions.scheduledFor,
-      };
+			if (result.success) {
+				job.status = 'completed'
+				job.result = result
+				emit('job:completed', { job, result })
+			} else {
+				throw new Error(result.error.message)
+			}
+		} catch (error) {
+			const errorMessage =
+				error instanceof Error ? error.message : 'Unknown error'
 
-      jobs.set(job.id, job);
-      pending.push(job.id);
-      emit("job:added", { job });
+			if (job.attempts < job.maxRetries) {
+				job.status = 'retrying'
+				job.error = errorMessage
+				const backoffDelay = calculateBackoff(job.attempts)
 
-      if (isRunning && !isPaused) {
-        processNext();
-      }
+				emit('job:retry', { job, nextRetryIn: backoffDelay })
 
-      return job;
-    },
+				// Schedule retry
+				setTimeout(() => {
+					if (isRunning && !isPaused) {
+						pending.push(jobId)
+						processNext()
+					}
+				}, backoffDelay)
+			} else {
+				job.status = 'failed'
+				job.error = errorMessage
+				emit('job:failed', { job, error: errorMessage })
+			}
+		} finally {
+			activeCount -= 1
+			processNext()
+		}
+	}
 
-    async addBatch(messages: EmailMessage[]): Promise<QueueJob[]> {
-      const addedJobs: QueueJob[] = [];
+	return {
+		async add(
+			message: EmailMessage,
+			addOptions: { scheduledFor?: Date } = {},
+		): Promise<QueueJob> {
+			const job: QueueJob = {
+				id: randomUUID(),
+				message,
+				status: 'pending',
+				attempts: 0,
+				maxRetries: config.maxRetries,
+				createdAt: new Date(),
+				scheduledFor: addOptions.scheduledFor,
+			}
 
-      for (const message of messages) {
-        const job = await this.add(message);
-        addedJobs.push(job);
-      }
+			jobs.set(job.id, job)
+			pending.push(job.id)
+			emit('job:added', { job })
 
-      return addedJobs;
-    },
+			if (isRunning && !isPaused) {
+				processNext()
+			}
 
-    async getJob(id: string): Promise<QueueJob | undefined> {
-      return jobs.get(id);
-    },
+			return job
+		},
 
-    async getJobs(options: JobFilterOptions = {}): Promise<QueueJob[]> {
-      const { status, limit = 100, offset = 0 } = options;
+		async addBatch(messages: EmailMessage[]): Promise<QueueJob[]> {
+			const addedJobs: QueueJob[] = []
 
-      let result = Array.from(jobs.values());
+			for (const message of messages) {
+				const job = await this.add(message)
+				addedJobs.push(job)
+			}
 
-      // Filter by status if provided
-      if (status) {
-        result = result.filter((job) => job.status === status);
-      }
+			return addedJobs
+		},
 
-      // Sort by creation date (newest first)
-      result.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+		async getJob(id: string): Promise<QueueJob | undefined> {
+			return jobs.get(id)
+		},
 
-      // Apply pagination
-      return result.slice(offset, offset + limit);
-    },
+		async getJobs(options: JobFilterOptions = {}): Promise<QueueJob[]> {
+			const { status, limit = 100, offset = 0 } = options
 
-    async getStats(): Promise<QueueStats> {
-      return getStatsSync();
-    },
+			let result = Array.from(jobs.values())
 
-    start(): void {
-      isRunning = true;
-      isPaused = false;
+			// Filter by status if provided
+			if (status) {
+				result = result.filter(job => job.status === status)
+			}
 
-      // Start processing pending jobs
-      for (let i = 0; i < config.concurrency; i++) {
-        processNext();
-      }
-    },
+			// Sort by creation date (newest first)
+			result.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
 
-    async stop(): Promise<void> {
-      isRunning = false;
+			// Apply pagination
+			return result.slice(offset, offset + limit)
+		},
 
-      // Wait for active jobs to complete
-      while (activeCount > 0) {
-        await delay(100);
-      }
-    },
+		async getStats(): Promise<QueueStats> {
+			return getStatsSync()
+		},
 
-    pause(): void {
-      isPaused = true;
-    },
+		start(): void {
+			isRunning = true
+			isPaused = false
 
-    resume(): void {
-      isPaused = false;
+			// Restore interrupted jobs (standard queue behavior)
+			for (const job of jobs.values()) {
+				if (job.status === 'retrying' || job.status === 'processing') {
+					job.status = 'pending'
+					if (!pending.includes(job.id)) {
+						pending.push(job.id)
+					}
+				}
+			}
 
-      for (let i = 0; i < config.concurrency; i++) {
-        processNext();
-      }
-    },
+			// Start processing pending jobs
+			for (let i = 0; i < config.concurrency; i++) {
+				processNext()
+			}
+		},
 
-    async clear(): Promise<number> {
-      const pendingCount = pending.length;
-      pending.length = 0;
+		async stop(): Promise<void> {
+			isRunning = false
 
-      for (const [id, job] of jobs) {
-        if (job.status === "pending") {
-          jobs.delete(id);
-        }
-      }
+			// Wait for active jobs to complete
+			while (activeCount > 0) {
+				await delay(100)
+			}
+		},
 
-      return pendingCount;
-    },
+		pause(): void {
+			isPaused = true
+		},
 
-    on<T>(event: QueueEventType, handler: QueueEventHandler<T>): void {
-      if (!eventHandlers.has(event)) {
-        eventHandlers.set(event, new Set());
-      }
-      eventHandlers.get(event)?.add(handler as QueueEventHandler);
-    },
+		resume(): void {
+			isPaused = false
 
-    off(event: QueueEventType, handler: QueueEventHandler): void {
-      eventHandlers.get(event)?.delete(handler);
-    },
-  };
-};
+			for (let i = 0; i < config.concurrency; i++) {
+				processNext()
+			}
+		},
+
+		async clear(): Promise<number> {
+			const pendingCount = pending.length
+			pending.length = 0
+
+			for (const [id, job] of jobs) {
+				if (job.status === 'pending') {
+					jobs.delete(id)
+				}
+			}
+
+			return pendingCount
+		},
+
+		on<T>(event: QueueEventType, handler: QueueEventHandler<T>): void {
+			if (!eventHandlers.has(event)) {
+				eventHandlers.set(event, new Set())
+			}
+			eventHandlers.get(event)?.add(handler as QueueEventHandler)
+		},
+
+		off(event: QueueEventType, handler: QueueEventHandler): void {
+			eventHandlers.get(event)?.delete(handler)
+		},
+	}
+}
