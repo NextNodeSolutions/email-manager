@@ -14,6 +14,7 @@ import type {
   QueueEventHandler,
   EmailMessage,
   EmailProvider,
+  JobFilterOptions,
 } from "../types/index.js";
 
 /**
@@ -272,6 +273,23 @@ export const createMemoryQueue = (
 
     async getJob(id: string): Promise<QueueJob | undefined> {
       return jobs.get(id);
+    },
+
+    async getJobs(options: JobFilterOptions = {}): Promise<QueueJob[]> {
+      const { status, limit = 100, offset = 0 } = options;
+
+      let result = Array.from(jobs.values());
+
+      // Filter by status if provided
+      if (status) {
+        result = result.filter((job) => job.status === status);
+      }
+
+      // Sort by creation date (newest first)
+      result.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+
+      // Apply pagination
+      return result.slice(offset, offset + limit);
     },
 
     async getStats(): Promise<QueueStats> {

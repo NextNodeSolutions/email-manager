@@ -43,6 +43,7 @@ export type {
   QueueStats,
   QueueEventType,
   QueueEventHandler,
+  JobFilterOptions,
   EmailQueue,
 } from "./queue.js";
 

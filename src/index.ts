@@ -66,6 +66,7 @@ export type {
   QueueStats,
   QueueEventType,
   QueueEventHandler,
+  JobFilterOptions,
   EmailQueue,
   // Template types
   TemplateRenderOptions,

@@ -154,6 +154,21 @@ export type QueueEventHandler<T = unknown> = (data: T) => void;
 /**
  * Email queue interface
  */
+/**
+ * Job filter options for getJobs
+ */
+export interface JobFilterOptions {
+  /** Filter by status */
+  status?: QueueJobStatus | undefined;
+  /** Limit number of results */
+  limit?: number | undefined;
+  /** Offset for pagination */
+  offset?: number | undefined;
+}
+
+/**
+ * Email queue interface
+ */
 export interface EmailQueue {
   /** Add single email to queue */
   add(
@@ -166,6 +181,9 @@ export interface EmailQueue {
 
   /** Get job by ID */
   getJob(id: string): Promise<QueueJob | undefined>;
+
+  /** Get all jobs with optional filtering */
+  getJobs(options?: JobFilterOptions): Promise<QueueJob[]>;
 
   /** Get queue statistics */
   getStats(): Promise<QueueStats>;

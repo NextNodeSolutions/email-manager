@@ -24,6 +24,7 @@ import type {
   EmailMessage,
   EmailProvider,
   SendResult,
+  JobFilterOptions,
 } from "../types/index.js";
 
 /**
@@ -709,6 +710,25 @@ export const createSQLiteQueue = (
       const row = db.prepare("SELECT * FROM email_queue WHERE id = ?").get(id);
 
       return isQueueRow(row) ? rowToJob(row) : undefined;
+    },
+
+    async getJobs(options: JobFilterOptions = {}): Promise<QueueJob[]> {
+      const { status, limit = 100, offset = 0 } = options;
+
+      let query = "SELECT * FROM email_queue";
+      const params: (string | number)[] = [];
+
+      if (status) {
+        query += " WHERE status = ?";
+        params.push(status);
+      }
+
+      query += " ORDER BY created_at DESC LIMIT ? OFFSET ?";
+      params.push(limit, offset);
+
+      const rows = db.prepare(query).all(...params);
+
+      return rows.filter(isQueueRow).map(rowToJob);
     },
 
     async getStats(): Promise<QueueStats> {
