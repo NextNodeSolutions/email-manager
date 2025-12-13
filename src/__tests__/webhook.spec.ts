@@ -3,15 +3,16 @@
  * Tests for webhook handler and parser
  */
 
-import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { createHmac } from 'node:crypto'
 
-import {
-	verifyWebhookSignature,
-	parseWebhookPayload,
-	isValidEventType,
-} from '../webhooks/parser.js'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+
 import { createWebhookHandler } from '../webhooks/handler.js'
+import {
+	isValidEventType,
+	parseWebhookPayload,
+	verifyWebhookSignature,
+} from '../webhooks/parser.js'
 
 const TEST_SECRET = 'test-webhook-secret'
 

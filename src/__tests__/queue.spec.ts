@@ -3,11 +3,10 @@
  * Tests for memory queue implementation
  */
 
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { createMemoryQueue } from '../queue/memory-queue.js'
-
-import type { EmailProvider, EmailMessage } from '../types/index.js'
+import type { EmailMessage, EmailProvider } from '../types/index.js'
 
 // Mock provider
 const createMockProvider = (

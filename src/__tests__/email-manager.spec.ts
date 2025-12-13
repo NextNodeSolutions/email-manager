@@ -3,10 +3,9 @@
  * Tests for the main EmailManager facade
  */
 
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { createEmailManager } from '../email-manager.js'
-
 import type { EmailMessage, TemplatedEmailMessage } from '../types/index.js'
 
 // Mock Resend

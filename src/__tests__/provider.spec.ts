@@ -3,11 +3,10 @@
  * Tests for Resend provider implementation
  */
 
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { createResendProvider } from '../providers/resend.js'
 import { createProvider } from '../providers/registry.js'
-
+import { createResendProvider } from '../providers/resend.js'
 import type { EmailMessage } from '../types/index.js'
 
 // Mock Resend client
