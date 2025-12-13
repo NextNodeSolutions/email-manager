@@ -51,6 +51,7 @@
 	"dependencies": {
 		"@nextnode/logger": "^0.3.0",
 		"@react-email/render": "^2.0.0",
+		"env-paths": "^3.0.0",
 		"resend": "^6.6.0"
 	},
 	"devDependencies": {

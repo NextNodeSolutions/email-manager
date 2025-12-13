@@ -6,8 +6,10 @@
 
 import { randomUUID } from 'node:crypto'
 import { existsSync, mkdirSync } from 'node:fs'
-import { dirname } from 'node:path'
+import { dirname, join } from 'node:path'
 import { DatabaseSync } from 'node:sqlite'
+
+import envPaths from 'env-paths'
 
 import type {
 	EmailMessage,
@@ -64,6 +66,22 @@ const DEFAULT_OPTIONS = {
  * Default retention period (7 days in hours)
  */
 const DEFAULT_RETENTION_HOURS = 168
+
+/**
+ * Default database key
+ */
+const DEFAULT_DATABASE_KEY = 'queue'
+
+/**
+ * Get database path using env-paths for cross-platform support
+ */
+const getDatabasePath = (
+	appName: string,
+	key: string = DEFAULT_DATABASE_KEY,
+): string => {
+	const paths = envPaths('email-manager', { suffix: '' })
+	return join(paths.data, appName, `${key}.db`)
+}
 
 /**
  * Cleanup interval (1 hour in milliseconds)
@@ -142,6 +160,10 @@ export const createSQLiteQueue = (
 	const config = { ...DEFAULT_OPTIONS, ...options }
 	const retentionHours =
 		backendConfig.retentionHours ?? DEFAULT_RETENTION_HOURS
+	const databasePath = getDatabasePath(
+		backendConfig.appName,
+		backendConfig.databaseKey,
+	)
 	const eventHandlers = new Map<QueueEventType, Set<QueueEventHandler>>()
 
 	let db: DatabaseSync
@@ -164,7 +186,7 @@ export const createSQLiteQueue = (
 	 * Ensure database directory exists
 	 */
 	const ensureDirectory = (): void => {
-		const dir = dirname(backendConfig.databasePath)
+		const dir = dirname(databasePath)
 		if (dir && !existsSync(dir)) {
 			mkdirSync(dir, { recursive: true })
 		}
@@ -175,7 +197,7 @@ export const createSQLiteQueue = (
 	 */
 	const initializeDatabase = (): void => {
 		ensureDirectory()
-		db = new DatabaseSync(backendConfig.databasePath)
+		db = new DatabaseSync(databasePath)
 
 		// Enable WAL mode for better concurrency
 		db.exec('PRAGMA journal_mode = WAL')
@@ -203,7 +225,7 @@ export const createSQLiteQueue = (
 		`)
 
 		queueLogger.info('SQLite queue initialized', {
-			details: { path: backendConfig.databasePath },
+			details: { path: databasePath },
 		})
 	}
 
@@ -522,7 +544,7 @@ export const createSQLiteQueue = (
 	const handleJobSuccess = (
 		jobId: string,
 		job: QueueJob,
-		result: { success: true; messageId: string },
+		result: SendResult & { success: true },
 	): void => {
 		updateJobStatus(jobId, 'completed', {
 			result: JSON.stringify(result),

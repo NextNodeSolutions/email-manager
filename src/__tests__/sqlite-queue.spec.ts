@@ -3,7 +3,7 @@
  * Tests for SQLite-backed queue implementation with auto-lifecycle
  */
 
-import { existsSync, mkdirSync, rmSync } from 'node:fs'
+import { existsSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
@@ -12,9 +12,21 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createSQLiteQueue } from '../queue/sqlite-queue.js'
 import type { EmailMessage, EmailProvider } from '../types/index.js'
 
-// Test database path
-const TEST_DB_DIR = join(tmpdir(), 'email-manager-tests')
-const TEST_DB_PATH = join(TEST_DB_DIR, 'test-queue.db')
+// Test directory (mock env-paths to use this)
+const TEST_DATA_DIR = join(tmpdir(), 'email-manager-tests')
+const TEST_APP_NAME = 'test-app'
+const TEST_DB_PATH = join(TEST_DATA_DIR, TEST_APP_NAME, 'queue.db')
+
+// Mock env-paths to use test directory
+vi.mock('env-paths', () => ({
+	default: () => ({
+		data: TEST_DATA_DIR,
+		config: TEST_DATA_DIR,
+		cache: TEST_DATA_DIR,
+		log: TEST_DATA_DIR,
+		temp: TEST_DATA_DIR,
+	}),
+}))
 
 // Mock provider
 const createMockProvider = (
@@ -58,20 +70,10 @@ describe('SQLite Queue', () => {
 		vi.clearAllMocks()
 		vi.useFakeTimers()
 
-		// Ensure test directory exists
-		if (!existsSync(TEST_DB_DIR)) {
-			mkdirSync(TEST_DB_DIR, { recursive: true })
-		}
-
-		// Remove test database if it exists
-		if (existsSync(TEST_DB_PATH)) {
-			rmSync(TEST_DB_PATH)
-		}
-		if (existsSync(`${TEST_DB_PATH}-wal`)) {
-			rmSync(`${TEST_DB_PATH}-wal`)
-		}
-		if (existsSync(`${TEST_DB_PATH}-shm`)) {
-			rmSync(`${TEST_DB_PATH}-shm`)
+		// Clean up test app directory if it exists
+		const testAppDir = join(TEST_DATA_DIR, TEST_APP_NAME)
+		if (existsSync(testAppDir)) {
+			rmSync(testAppDir, { recursive: true })
 		}
 
 		mockProvider = createMockProvider()
@@ -80,16 +82,11 @@ describe('SQLite Queue', () => {
 	afterEach(() => {
 		vi.useRealTimers()
 
-		// Cleanup test database
+		// Cleanup test app directory
 		try {
-			if (existsSync(TEST_DB_PATH)) {
-				rmSync(TEST_DB_PATH)
-			}
-			if (existsSync(`${TEST_DB_PATH}-wal`)) {
-				rmSync(`${TEST_DB_PATH}-wal`)
-			}
-			if (existsSync(`${TEST_DB_PATH}-shm`)) {
-				rmSync(`${TEST_DB_PATH}-shm`)
+			const testAppDir = join(TEST_DATA_DIR, TEST_APP_NAME)
+			if (existsSync(testAppDir)) {
+				rmSync(testAppDir, { recursive: true })
 			}
 		} catch {
 			// Ignore cleanup errors
@@ -100,24 +97,42 @@ describe('SQLite Queue', () => {
 		it('should create database file on initialization', () => {
 			createSQLiteQueue(mockProvider, {
 				backend: 'sqlite',
-				databasePath: TEST_DB_PATH,
+				appName: TEST_APP_NAME,
 			})
 
 			expect(existsSync(TEST_DB_PATH)).toBe(true)
 		})
 
 		it('should create database directory if it does not exist', () => {
-			const nestedPath = join(TEST_DB_DIR, 'nested', 'queue.db')
+			const nestedAppName = 'nested-test-app'
+			const nestedDbPath = join(TEST_DATA_DIR, nestedAppName, 'queue.db')
 
 			createSQLiteQueue(mockProvider, {
 				backend: 'sqlite',
-				databasePath: nestedPath,
+				appName: nestedAppName,
 			})
 
-			expect(existsSync(nestedPath)).toBe(true)
+			expect(existsSync(nestedDbPath)).toBe(true)
 
 			// Cleanup
-			rmSync(join(TEST_DB_DIR, 'nested'), { recursive: true })
+			rmSync(join(TEST_DATA_DIR, nestedAppName), { recursive: true })
+		})
+
+		it('should support custom databaseKey', () => {
+			const customKey = 'notifications'
+			const customDbPath = join(
+				TEST_DATA_DIR,
+				TEST_APP_NAME,
+				`${customKey}.db`,
+			)
+
+			createSQLiteQueue(mockProvider, {
+				backend: 'sqlite',
+				appName: TEST_APP_NAME,
+				databaseKey: customKey,
+			})
+
+			expect(existsSync(customDbPath)).toBe(true)
 		})
 	})
 
@@ -125,7 +140,7 @@ describe('SQLite Queue', () => {
 		it('should add job to queue', async () => {
 			const queue = createSQLiteQueue(mockProvider, {
 				backend: 'sqlite',
-				databasePath: TEST_DB_PATH,
+				appName: TEST_APP_NAME,
 			})
 			const message = createTestMessage()
 
@@ -139,7 +154,7 @@ describe('SQLite Queue', () => {
 		it('should add batch of jobs', async () => {
 			const queue = createSQLiteQueue(mockProvider, {
 				backend: 'sqlite',
-				databasePath: TEST_DB_PATH,
+				appName: TEST_APP_NAME,
 			})
 			const messages = [
 				createTestMessage(),
@@ -158,7 +173,7 @@ describe('SQLite Queue', () => {
 		it('should get job by ID', async () => {
 			const queue = createSQLiteQueue(mockProvider, {
 				backend: 'sqlite',
-				databasePath: TEST_DB_PATH,
+				appName: TEST_APP_NAME,
 			})
 			const message = createTestMessage()
 
@@ -172,7 +187,7 @@ describe('SQLite Queue', () => {
 		it('should return undefined for non-existent job', async () => {
 			const queue = createSQLiteQueue(mockProvider, {
 				backend: 'sqlite',
-				databasePath: TEST_DB_PATH,
+				appName: TEST_APP_NAME,
 			})
 
 			const job = await queue.getJob('non-existent-id')
@@ -183,7 +198,7 @@ describe('SQLite Queue', () => {
 		it('should schedule job for future execution', async () => {
 			const queue = createSQLiteQueue(mockProvider, {
 				backend: 'sqlite',
-				databasePath: TEST_DB_PATH,
+				appName: TEST_APP_NAME,
 			})
 			const message = createTestMessage()
 			const futureDate = new Date(Date.now() + 60000)
@@ -198,7 +213,7 @@ describe('SQLite Queue', () => {
 		it('should return correct stats for empty queue', async () => {
 			const queue = createSQLiteQueue(mockProvider, {
 				backend: 'sqlite',
-				databasePath: TEST_DB_PATH,
+				appName: TEST_APP_NAME,
 			})
 
 			const stats = await queue.getStats()
@@ -213,7 +228,7 @@ describe('SQLite Queue', () => {
 		it('should track pending jobs', async () => {
 			const queue = createSQLiteQueue(mockProvider, {
 				backend: 'sqlite',
-				databasePath: TEST_DB_PATH,
+				appName: TEST_APP_NAME,
 			})
 
 			await queue.add(createTestMessage())
@@ -230,7 +245,7 @@ describe('SQLite Queue', () => {
 		it('should start and stop queue', async () => {
 			const queue = createSQLiteQueue(mockProvider, {
 				backend: 'sqlite',
-				databasePath: TEST_DB_PATH,
+				appName: TEST_APP_NAME,
 			})
 
 			queue.start()
@@ -243,7 +258,7 @@ describe('SQLite Queue', () => {
 		it('should pause and resume queue', () => {
 			const queue = createSQLiteQueue(mockProvider, {
 				backend: 'sqlite',
-				databasePath: TEST_DB_PATH,
+				appName: TEST_APP_NAME,
 			})
 
 			queue.start()
@@ -257,7 +272,7 @@ describe('SQLite Queue', () => {
 		it('should clear all pending jobs', async () => {
 			const queue = createSQLiteQueue(mockProvider, {
 				backend: 'sqlite',
-				databasePath: TEST_DB_PATH,
+				appName: TEST_APP_NAME,
 			})
 
 			await queue.add(createTestMessage())
@@ -276,7 +291,7 @@ describe('SQLite Queue', () => {
 		it('should process pending jobs when started', async () => {
 			const queue = createSQLiteQueue(
 				mockProvider,
-				{ backend: 'sqlite', databasePath: TEST_DB_PATH },
+				{ backend: 'sqlite', appName: TEST_APP_NAME },
 				{ concurrency: 1 },
 			)
 			const message = createTestMessage()
@@ -295,7 +310,7 @@ describe('SQLite Queue', () => {
 		it('should register and trigger event handlers', async () => {
 			const queue = createSQLiteQueue(mockProvider, {
 				backend: 'sqlite',
-				databasePath: TEST_DB_PATH,
+				appName: TEST_APP_NAME,
 			})
 			const handler = vi.fn()
 
@@ -309,7 +324,7 @@ describe('SQLite Queue', () => {
 		it('should unregister event handlers', async () => {
 			const queue = createSQLiteQueue(mockProvider, {
 				backend: 'sqlite',
-				databasePath: TEST_DB_PATH,
+				appName: TEST_APP_NAME,
 			})
 			const handler = vi.fn()
 
@@ -326,7 +341,7 @@ describe('SQLite Queue', () => {
 		it('should use default options', async () => {
 			const queue = createSQLiteQueue(mockProvider, {
 				backend: 'sqlite',
-				databasePath: TEST_DB_PATH,
+				appName: TEST_APP_NAME,
 			})
 			const job = await queue.add(createTestMessage())
 
@@ -336,7 +351,7 @@ describe('SQLite Queue', () => {
 		it('should use custom max retries', async () => {
 			const queue = createSQLiteQueue(
 				mockProvider,
-				{ backend: 'sqlite', databasePath: TEST_DB_PATH },
+				{ backend: 'sqlite', appName: TEST_APP_NAME },
 				{ maxRetries: 5 },
 			)
 			const job = await queue.add(createTestMessage())
@@ -350,7 +365,7 @@ describe('SQLite Queue', () => {
 			// Create first queue and add jobs
 			const queue1 = createSQLiteQueue(mockProvider, {
 				backend: 'sqlite',
-				databasePath: TEST_DB_PATH,
+				appName: TEST_APP_NAME,
 			})
 
 			await queue1.add(createTestMessage())
@@ -359,7 +374,7 @@ describe('SQLite Queue', () => {
 			// Create second queue with same database
 			const queue2 = createSQLiteQueue(mockProvider, {
 				backend: 'sqlite',
-				databasePath: TEST_DB_PATH,
+				appName: TEST_APP_NAME,
 			})
 
 			const stats = await queue2.getStats()
@@ -373,7 +388,7 @@ describe('SQLite Queue', () => {
 			const onProgress = vi.fn()
 			const queue = createSQLiteQueue(
 				mockProvider,
-				{ backend: 'sqlite', databasePath: TEST_DB_PATH },
+				{ backend: 'sqlite', appName: TEST_APP_NAME },
 				{ concurrency: 1, onProgress },
 			)
 
@@ -390,7 +405,7 @@ describe('SQLite Queue', () => {
 			const onComplete = vi.fn()
 			const queue = createSQLiteQueue(
 				mockProvider,
-				{ backend: 'sqlite', databasePath: TEST_DB_PATH },
+				{ backend: 'sqlite', appName: TEST_APP_NAME },
 				{ concurrency: 2, onComplete },
 			)
 

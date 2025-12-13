@@ -13,6 +13,9 @@ importers:
             '@react-email/render':
                 specifier: ^2.0.0
                 version: 2.0.0(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
+            env-paths:
+                specifier: ^3.0.0
+                version: 3.0.0
             resend:
                 specifier: ^6.6.0
                 version: 6.6.0(@react-email/render@2.0.0(react-dom@19.2.3(react@19.2.3))(react@19.2.3))
@@ -1740,6 +1743,13 @@ packages:
                 integrity: sha512-+h1lkLKhZMTYjog1VEpJNG7NZJWcuc2DDk/qsqSTRRCOXiLjeQ1d1/udrUGhqMxUgAlwKNZ0cf2uqan5GLuS2A==,
             }
         engines: { node: '>=6' }
+
+    env-paths@3.0.0:
+        resolution:
+            {
+                integrity: sha512-dtJUTepzMW3Lm/NPxRf3wP4642UWhjL2sQxc+ym2YMj1m/H2zDNQOlezafzkHwn6sMstjHTwG6iQQsctDW/b1A==,
+            }
+        engines: { node: ^12.20.0 || ^14.13.1 || >=16.0.0 }
 
     environment@1.1.0:
         resolution:
@@ -4711,6 +4721,8 @@ snapshots:
     entities@4.5.0: {}
 
     env-paths@2.2.1: {}
+
+    env-paths@3.0.0: {}
 
     environment@1.1.0: {}
 

@@ -6,7 +6,7 @@ A flexible, provider-agnostic email management library for NextNode projects wit
 
 - **Provider-agnostic**: Currently supports Resend, architecture ready for easy extension
 - **React Email templates**: Type-safe JSX email templates with automatic HTML/text rendering
-- **Built-in queue**: In-memory queue with retry logic, rate limiting, and exponential backoff
+- **Built-in queue**: In-memory or persistent SQLite queue with retry logic, rate limiting, and exponential backoff
 - **Webhook handling**: Framework-agnostic webhook processing with signature verification
 - **Type-safe**: Full TypeScript support with discriminated unions for error handling
 
@@ -30,23 +30,23 @@ pnpm add react
 import { createEmailManager } from '@nextnode/email-manager'
 
 const emailManager = createEmailManager({
-  provider: 'resend',
-  providerConfig: { apiKey: process.env.RESEND_API_KEY },
-  defaultFrom: 'noreply@myapp.com',
-  queue: { maxRetries: 3, rateLimit: 10 }
+	provider: 'resend',
+	providerConfig: { apiKey: process.env.RESEND_API_KEY },
+	defaultFrom: 'noreply@myapp.com',
+	queue: { maxRetries: 3, rateLimit: 10 },
 })
 
 // Send a simple email
 const result = await emailManager.send({
-  to: 'user@example.com',
-  subject: 'Hello',
-  html: '<h1>Welcome!</h1>'
+	to: 'user@example.com',
+	subject: 'Hello',
+	html: '<h1>Welcome!</h1>',
 })
 
 if (result.success) {
-  console.log('Email sent:', result.data.id)
+	console.log('Email sent:', result.data.id)
 } else {
-  console.error('Failed:', result.error.message)
+	console.error('Failed:', result.error.message)
 }
 ```
 
@@ -58,11 +58,11 @@ Create an email manager instance with the specified configuration.
 
 ```typescript
 const emailManager = createEmailManager({
-  provider: 'resend',
-  providerConfig: { apiKey: 'your-api-key' },
-  defaultFrom: 'noreply@myapp.com',  // Optional: default sender
-  queue: { maxRetries: 3 },           // Optional: queue config, false to disable
-  templateOptions: { pretty: false }  // Optional: template rendering options
+	provider: 'resend',
+	providerConfig: { apiKey: 'your-api-key' },
+	defaultFrom: 'noreply@myapp.com', // Optional: default sender
+	queue: { maxRetries: 3 }, // Optional: queue config, false to disable
+	templateOptions: { pretty: false }, // Optional: template rendering options
 })
 ```
 
@@ -72,11 +72,11 @@ const emailManager = createEmailManager({
 
 ```typescript
 const result = await emailManager.send({
-  from: 'sender@example.com',  // Optional if defaultFrom is set
-  to: 'user@example.com',
-  subject: 'Welcome!',
-  html: '<h1>Hello</h1>',
-  text: 'Hello'  // Optional: auto-generated from HTML if omitted
+	from: 'sender@example.com', // Optional if defaultFrom is set
+	to: 'user@example.com',
+	subject: 'Welcome!',
+	html: '<h1>Hello</h1>',
+	text: 'Hello', // Optional: auto-generated from HTML if omitted
 })
 ```
 
@@ -86,10 +86,10 @@ const result = await emailManager.send({
 import { WelcomeEmail } from './emails/welcome'
 
 const result = await emailManager.sendTemplate({
-  to: 'user@example.com',
-  subject: 'Welcome!',
-  template: WelcomeEmail,
-  props: { name: 'John', verifyUrl: 'https://...' }
+	to: 'user@example.com',
+	subject: 'Welcome!',
+	template: WelcomeEmail,
+	props: { name: 'John', verifyUrl: 'https://...' },
 })
 ```
 
@@ -97,8 +97,8 @@ const result = await emailManager.sendTemplate({
 
 ```typescript
 const result = await emailManager.sendBatch([
-  { to: 'user1@example.com', subject: 'Newsletter', html: '...' },
-  { to: 'user2@example.com', subject: 'Newsletter', html: '...' }
+	{ to: 'user1@example.com', subject: 'Newsletter', html: '...' },
+	{ to: 'user2@example.com', subject: 'Newsletter', html: '...' },
 ])
 
 console.log(`Sent: ${result.data.successful}/${result.data.total}`)
@@ -119,8 +119,8 @@ const scheduledJob = await emailManager.enqueue(message, new Date('2025-01-01'))
 #### Start/Stop Processing
 
 ```typescript
-emailManager.startQueue()  // Start processing
-await emailManager.stopQueue()  // Stop gracefully
+emailManager.startQueue() // Start processing
+await emailManager.stopQueue() // Stop gracefully
 ```
 
 #### Send via Queue
@@ -141,36 +141,36 @@ Process email delivery events (bounces, complaints, opens, clicks).
 import { createWebhookHandler } from '@nextnode/email-manager'
 
 const webhooks = createWebhookHandler({
-  secret: process.env.WEBHOOK_SECRET,
-  verifySignature: true
+	secret: process.env.WEBHOOK_SECRET,
+	verifySignature: true,
 })
 
 // Register handlers
-webhooks.on('email.delivered', async (event) => {
-  console.log('Delivered:', event.data.email_id)
+webhooks.on('email.delivered', async event => {
+	console.log('Delivered:', event.data.email_id)
 })
 
-webhooks.on('email.bounced', async (event) => {
-  console.log('Bounced:', event.data.bounce.type)
-  // Handle bounce - unsubscribe user, etc.
+webhooks.on('email.bounced', async event => {
+	console.log('Bounced:', event.data.bounce.type)
+	// Handle bounce - unsubscribe user, etc.
 })
 
-webhooks.on('email.complained', async (event) => {
-  // Handle spam complaint
+webhooks.on('email.complained', async event => {
+	// Handle spam complaint
 })
 
 // In your route handler (works with any framework)
 export async function POST(request: Request) {
-  const body = await request.text()
-  const signature = request.headers.get('svix-signature')
+	const body = await request.text()
+	const signature = request.headers.get('svix-signature')
 
-  const result = await webhooks.process(body, signature)
+	const result = await webhooks.process(body, signature)
 
-  if (!result.success) {
-    return new Response(result.error.message, { status: 400 })
-  }
+	if (!result.success) {
+		return new Response(result.error.message, { status: 400 })
+	}
 
-  return new Response('OK', { status: 200 })
+	return new Response('OK', { status: 200 })
 }
 ```
 
@@ -180,12 +180,96 @@ export async function POST(request: Request) {
 
 ```typescript
 interface QueueOptions {
-  concurrency?: number     // Max concurrent sends (default: 5)
-  maxRetries?: number      // Max retry attempts (default: 3)
-  retryDelay?: number      // Initial retry delay in ms (default: 1000)
-  maxRetryDelay?: number   // Max retry delay in ms (default: 30000)
-  rateLimit?: number       // Emails per second (default: 10)
-  batchSize?: number       // Batch processing size (default: 10)
+	concurrency?: number // Max concurrent sends (default: 5)
+	maxRetries?: number // Max retry attempts (default: 3)
+	retryDelay?: number // Initial retry delay in ms (default: 1000)
+	maxRetryDelay?: number // Max retry delay in ms (default: 30000)
+	rateLimit?: number // Emails per second (default: 10)
+	batchSize?: number // Batch processing size (default: 10)
+	backendConfig?: QueueBackendConfig // Storage backend (default: memory)
+}
+```
+
+### Queue Storage Backends
+
+By default, the queue uses in-memory storage. For persistence across restarts, use the SQLite backend.
+
+#### In-Memory (Default)
+
+```typescript
+const emailManager = createEmailManager({
+	provider: 'resend',
+	providerConfig: { apiKey: process.env.RESEND_API_KEY },
+	queue: { maxRetries: 3 }, // Uses in-memory backend
+})
+```
+
+#### SQLite (Persistent)
+
+The SQLite backend stores jobs in the system data directory:
+
+| Platform | Location                                                 |
+| -------- | -------------------------------------------------------- |
+| Linux    | `~/.local/share/email-manager/{appName}/`                |
+| macOS    | `~/Library/Application Support/email-manager/{appName}/` |
+| Windows  | `%LOCALAPPDATA%\email-manager\Data\{appName}\`           |
+
+```typescript
+const emailManager = createEmailManager({
+	provider: 'resend',
+	providerConfig: { apiKey: process.env.RESEND_API_KEY },
+	queue: {
+		maxRetries: 3,
+		backendConfig: {
+			backend: 'sqlite',
+			appName: 'my-app', // Required: unique app identifier
+		},
+	},
+})
+```
+
+##### Multi-Queue Support
+
+Use `databaseKey` to create multiple queues within the same app:
+
+```typescript
+// Transactional emails
+const transactionalQueue = createEmailManager({
+	provider: 'resend',
+	providerConfig: { apiKey: process.env.RESEND_API_KEY },
+	queue: {
+		backendConfig: {
+			backend: 'sqlite',
+			appName: 'my-app',
+			databaseKey: 'transactional', // Uses: {dataDir}/my-app/transactional.db
+		},
+	},
+})
+
+// Marketing emails (different retry strategy)
+const marketingQueue = createEmailManager({
+	provider: 'resend',
+	providerConfig: { apiKey: process.env.RESEND_API_KEY },
+	queue: {
+		maxRetries: 5,
+		backendConfig: {
+			backend: 'sqlite',
+			appName: 'my-app',
+			databaseKey: 'marketing', // Uses: {dataDir}/my-app/marketing.db
+			retentionHours: 48, // Keep completed jobs for 2 days
+		},
+	},
+})
+```
+
+##### SQLite Backend Options
+
+```typescript
+interface SQLiteBackendConfig {
+	backend: 'sqlite'
+	appName: string // Required: prevents conflicts between apps
+	databaseKey?: string // Optional: queue identifier (default: 'queue')
+	retentionHours?: number // Cleanup interval for completed jobs (default: 168 = 7 days)
 }
 ```
 
@@ -193,18 +277,18 @@ interface QueueOptions {
 
 ```typescript
 interface EmailMessage {
-  from: string | { email: string; name?: string }
-  to: string | string[] | { email: string; name?: string }[]
-  subject: string
-  html?: string
-  text?: string
-  cc?: string | string[]
-  bcc?: string | string[]
-  replyTo?: string | string[]
-  attachments?: EmailAttachment[]
-  headers?: { name: string; value: string }[]
-  tags?: { name: string; value: string }[]
-  scheduledAt?: Date | string
+	from: string | { email: string; name?: string }
+	to: string | string[] | { email: string; name?: string }[]
+	subject: string
+	html?: string
+	text?: string
+	cc?: string | string[]
+	bcc?: string | string[]
+	replyTo?: string | string[]
+	attachments?: EmailAttachment[]
+	headers?: { name: string; value: string }[]
+	tags?: { name: string; value: string }[]
+	scheduledAt?: Date | string
 }
 ```
 
@@ -242,12 +326,12 @@ Internationalization is the responsibility of the client application. Pass alrea
 const t = getTranslations('emails')
 
 await emailManager.sendTemplate({
-  to: user.email,
-  subject: t('welcome.subject'),
-  template: WelcomeEmail,
-  props: {
-    greeting: t('welcome.greeting', { name: user.name })
-  }
+	to: user.email,
+	subject: t('welcome.subject'),
+	template: WelcomeEmail,
+	props: {
+		greeting: t('welcome.greeting', { name: user.name }),
+	},
 })
 ```
 
@@ -259,11 +343,11 @@ All operations return discriminated union results for type-safe error handling:
 const result = await emailManager.send(message)
 
 if (result.success) {
-  // TypeScript knows result.data exists
-  console.log('Sent:', result.data.id)
+	// TypeScript knows result.data exists
+	console.log('Sent:', result.data.id)
 } else {
-  // TypeScript knows result.error exists
-  console.error(result.error.code, result.error.message)
+	// TypeScript knows result.error exists
+	console.error(result.error.code, result.error.message)
 }
 ```
 
