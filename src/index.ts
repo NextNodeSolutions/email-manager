@@ -93,6 +93,4 @@ export {
   webhookLogger,
   templateLogger,
   logDebug,
-  logProviderResponse,
-  logError,
 } from "./utils/logger.js";
