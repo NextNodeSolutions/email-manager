@@ -3,22 +3,21 @@
  * Framework-agnostic webhook event handling
  */
 
-import { verifyWebhookSignature, parseWebhookPayload } from './parser.js'
-
 import type {
+	EmailBouncedEvent,
+	EmailClickedEvent,
+	EmailComplainedEvent,
+	EmailDeliveredEvent,
+	EmailDeliveryDelayedEvent,
+	EmailOpenedEvent,
+	EmailSentEvent,
+	Result,
+	WebhookError,
 	WebhookEvent,
 	WebhookEventType,
 	WebhookHandler,
-	WebhookError,
-	EmailDeliveredEvent,
-	EmailBouncedEvent,
-	EmailOpenedEvent,
-	EmailClickedEvent,
-	EmailComplainedEvent,
-	EmailSentEvent,
-	EmailDeliveryDelayedEvent,
-	Result,
 } from '../types/index.js'
+import { parseWebhookPayload, verifyWebhookSignature } from './parser.js'
 
 /**
  * Webhook handler configuration
@@ -68,6 +67,43 @@ export interface WebhookHandlerInstance {
 	) => Promise<Result<ProcessResult, WebhookError>>
 	hasHandler: (event: WebhookEventType) => boolean
 	getRegisteredEvents: () => WebhookEventType[]
+}
+
+/**
+ * Verify webhook signature if enabled
+ * Returns error result if verification fails, null if ok or disabled
+ */
+const verifySignatureIfEnabled = (
+	verifySignature: boolean,
+	signature: string | undefined,
+	secret: string,
+	body: string,
+	tolerance: number,
+): { success: false; error: WebhookError } | null => {
+	if (!verifySignature) return null
+
+	if (!signature) {
+		return {
+			success: false,
+			error: {
+				code: 'INVALID_SIGNATURE',
+				message: 'Missing signature header',
+			},
+		}
+	}
+
+	const verifyResult = verifyWebhookSignature({
+		secret,
+		signature,
+		body,
+		tolerance,
+	})
+
+	if (!verifyResult.success) {
+		return verifyResult
+	}
+
+	return null
 }
 
 /**
@@ -132,28 +168,14 @@ export const createWebhookHandler = (
 		signature?: string,
 	): Promise<Result<ProcessResult, WebhookError>> => {
 		// Verify signature if enabled
-		if (verifySignature) {
-			if (!signature) {
-				return {
-					success: false,
-					error: {
-						code: 'INVALID_SIGNATURE',
-						message: 'Missing signature header',
-					},
-				}
-			}
-
-			const verifyResult = verifyWebhookSignature({
-				secret,
-				signature,
-				body,
-				tolerance: signatureTolerance,
-			})
-
-			if (!verifyResult.success) {
-				return verifyResult as Result<never, WebhookError>
-			}
-		}
+		const signatureError = verifySignatureIfEnabled(
+			verifySignature,
+			signature,
+			secret,
+			body,
+			signatureTolerance,
+		)
+		if (signatureError) return signatureError
 
 		// Parse payload
 		const parseResult = parseWebhookPayload(body)
@@ -162,36 +184,21 @@ export const createWebhookHandler = (
 		}
 
 		const event = parseResult.data
-		const handler = handlers[event.type]
+		const handler = handlers[event.type] as
+			| WebhookHandler<WebhookEvent>
+			| undefined
 
 		if (!handler) {
-			// No handler registered for this event type - not an error
-			return {
-				success: true,
-				data: { processed: false, event },
-			}
+			return { success: true, data: { processed: false, event } }
 		}
 
 		try {
-			// Call the handler with the typed event
-			// eslint-disable-next-line @typescript-eslint/no-explicit-any
-			await handler(event as any)
-
-			return {
-				success: true,
-				data: { processed: true, event },
-			}
+			await handler(event)
+			return { success: true, data: { processed: true, event } }
 		} catch (error) {
-			return {
-				success: false,
-				error: {
-					code: 'PARSE_ERROR',
-					message:
-						error instanceof Error
-							? error.message
-							: 'Handler error',
-				},
-			}
+			const message =
+				error instanceof Error ? error.message : 'Handler error'
+			return { success: false, error: { code: 'PARSE_ERROR', message } }
 		}
 	}
 

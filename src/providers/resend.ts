@@ -3,17 +3,17 @@
  * Implementation of EmailProvider interface for Resend
  */
 
-import { createProviderUtils } from './base.js'
+import type { CreateBatchOptions, CreateEmailOptions, Resend } from 'resend'
 
-import type { Resend, CreateEmailOptions, CreateBatchOptions } from 'resend'
 import type {
+	BatchSendResult,
+	EmailError,
 	EmailMessage,
 	EmailProvider,
 	ProviderConfig,
 	SendResult,
-	BatchSendResult,
-	EmailError,
 } from '../types/index.js'
+import { createProviderUtils } from './base.js'
 
 /**
  * Resend email payload type (simplified for our use case)
@@ -99,56 +99,67 @@ export const createResendProvider = (
 	})
 
 	/**
-	 * Map EmailMessage to Resend payload
+	 * Map optional recipients (cc, bcc, replyTo)
 	 */
-	const mapToResendPayload = (message: EmailMessage): ResendEmailPayload => {
-		const payload: ResendEmailPayload = {
-			from: utils.normalizeRecipient(message.from),
-			to: utils.normalizeRecipients(message.to),
-			subject: message.subject,
-		}
+	const mapOptionalRecipients = (
+		message: EmailMessage,
+	): Pick<ResendEmailPayload, 'cc' | 'bcc' | 'replyTo'> => ({
+		...(message.cc && { cc: utils.normalizeRecipients(message.cc) }),
+		...(message.bcc && { bcc: utils.normalizeRecipients(message.bcc) }),
+		...(message.replyTo && {
+			replyTo: utils.normalizeRecipients(message.replyTo),
+		}),
+	})
 
-		if (message.cc) {
-			payload.cc = utils.normalizeRecipients(message.cc)
-		}
-		if (message.bcc) {
-			payload.bcc = utils.normalizeRecipients(message.bcc)
-		}
-		if (message.replyTo) {
-			payload.replyTo = utils.normalizeRecipients(message.replyTo)
-		}
-		if (message.html) {
-			payload.html = message.html
-		}
-		if (message.text) {
-			payload.text = message.text
-		}
-		if (message.attachments) {
-			payload.attachments = message.attachments.map(a => ({
+	/**
+	 * Map optional content fields (html, text, attachments)
+	 */
+	const mapOptionalContent = (
+		message: EmailMessage,
+	): Pick<ResendEmailPayload, 'html' | 'text' | 'attachments'> => ({
+		...(message.html && { html: message.html }),
+		...(message.text && { text: message.text }),
+		...(message.attachments && {
+			attachments: message.attachments.map(a => ({
 				filename: a.filename,
 				content: a.content,
-			}))
-		}
-		if (message.headers) {
-			payload.headers = Object.fromEntries(
+			})),
+		}),
+	})
+
+	/**
+	 * Map optional metadata (headers, tags, scheduledAt)
+	 */
+	const mapOptionalMetadata = (
+		message: EmailMessage,
+	): Pick<ResendEmailPayload, 'headers' | 'tags' | 'scheduledAt'> => ({
+		...(message.headers && {
+			headers: Object.fromEntries(
 				message.headers.map(h => [h.name, h.value]),
-			)
-		}
-		if (message.tags) {
-			payload.tags = message.tags.map(t => ({
-				name: t.name,
-				value: t.value,
-			}))
-		}
-		if (message.scheduledAt) {
-			payload.scheduledAt =
+			),
+		}),
+		...(message.tags && {
+			tags: message.tags.map(t => ({ name: t.name, value: t.value })),
+		}),
+		...(message.scheduledAt && {
+			scheduledAt:
 				message.scheduledAt instanceof Date
 					? message.scheduledAt.toISOString()
-					: message.scheduledAt
-		}
+					: message.scheduledAt,
+		}),
+	})
 
-		return payload
-	}
+	/**
+	 * Map EmailMessage to Resend payload
+	 */
+	const mapToResendPayload = (message: EmailMessage): ResendEmailPayload => ({
+		from: utils.normalizeRecipient(message.from),
+		to: utils.normalizeRecipients(message.to),
+		subject: message.subject,
+		...mapOptionalRecipients(message),
+		...mapOptionalContent(message),
+		...mapOptionalMetadata(message),
+	})
 
 	return {
 		name: 'resend',

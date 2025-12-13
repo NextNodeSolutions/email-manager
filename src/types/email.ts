@@ -70,14 +70,16 @@ export interface EmailMessage {
  * React component type (generic to avoid hard React dependency at compile time)
  * The actual component will be a React functional component
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export type EmailTemplateComponent<TProps = any> = (props: TProps) => unknown
+export type EmailTemplateComponent<TProps = Record<string, unknown>> = (
+	props: TProps,
+) => unknown
 
 /**
  * Email message with React Email template support
  */
-export interface TemplatedEmailMessage<TProps = Record<string, unknown>>
-	extends Omit<EmailMessage, 'html' | 'text'> {
+export interface TemplatedEmailMessage<
+	TProps = Record<string, unknown>,
+> extends Omit<EmailMessage, 'html' | 'text'> {
 	/** React Email component */
 	template: EmailTemplateComponent<TProps>
 	/** Props for the template */
