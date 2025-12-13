@@ -92,5 +92,4 @@ export {
   queueLogger,
   webhookLogger,
   templateLogger,
-  logDebug,
 } from "./utils/logger.js";

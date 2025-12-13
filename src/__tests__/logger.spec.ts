@@ -10,7 +10,6 @@ import {
   queueLogger,
   webhookLogger,
   templateLogger,
-  logDebug,
 } from "../utils/logger.js";
 
 // Mock @nextnode/logger
@@ -46,31 +45,6 @@ describe("Logger Utilities", () => {
       expect(queueLogger).toBeDefined();
       expect(webhookLogger).toBeDefined();
       expect(templateLogger).toBeDefined();
-    });
-  });
-
-  describe("logDebug", () => {
-    it("should log debug information", () => {
-      const testData = { key: "value", number: 42 };
-
-      logDebug("Test debug", testData);
-
-      expect(logger.info).toHaveBeenCalledWith("[DEBUG] Test debug", {
-        details: testData,
-      });
-    });
-
-    it("should handle complex objects", () => {
-      const complexData = {
-        nested: { array: [1, 2, 3], string: "test" },
-        func: (): string => "test",
-      };
-
-      logDebug("Complex object", complexData);
-
-      expect(logger.info).toHaveBeenCalledWith("[DEBUG] Complex object", {
-        details: complexData,
-      });
     });
   });
 });

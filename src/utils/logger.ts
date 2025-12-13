@@ -27,12 +27,3 @@ export const webhookLogger = createLogger({
 export const templateLogger = createLogger({
   prefix: "TEMPLATE",
 });
-
-/**
- * Log helper for debugging complex objects
- * @param label - Label for the log entry
- * @param data - Data to log
- */
-export const logDebug = (label: string, data: unknown): void => {
-  logger.info(`[DEBUG] ${label}`, { details: data });
-};
