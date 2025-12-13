@@ -6,11 +6,11 @@
 import { createHmac, timingSafeEqual } from 'node:crypto'
 
 import type {
+	Result,
+	WebhookError,
 	WebhookEvent,
 	WebhookEventType,
 	WebhookVerifyOptions,
-	WebhookError,
-	Result,
 } from '../types/index.js'
 
 /**

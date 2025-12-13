@@ -5,72 +5,67 @@
 
 // Email types
 export type {
-  EmailRecipient,
-  EmailAttachment,
-  EmailHeader,
-  EmailTag,
-  EmailMessage,
-  EmailTemplateComponent,
-  TemplatedEmailMessage,
-} from "./email.js";
-
-// Result types (discriminated unions)
-export type {
-  Result,
-  EmailErrorCode,
-  EmailError,
-  SendSuccess,
-  SendResult,
-  BatchSendSuccess,
-  BatchSendResult,
-} from "./result.js";
-
+	EmailAttachment,
+	EmailHeader,
+	EmailMessage,
+	EmailRecipient,
+	EmailTag,
+	EmailTemplateComponent,
+	TemplatedEmailMessage,
+} from './email.js'
 // Provider types (Strategy pattern)
 export type {
-  ProviderConfig,
-  EmailProvider,
-  ProviderFactory,
-} from "./provider.js";
-
+	EmailProvider,
+	ProviderConfig,
+	ProviderFactory,
+} from './provider.js'
 // Queue types
 export type {
-  QueueJobStatus,
-  QueueJob,
-  QueueBackendConfig,
-  BatchProgressStats,
-  BatchCompleteSummary,
-  QueueOptions,
-  QueueStats,
-  QueueEventType,
-  QueueEventHandler,
-  JobFilterOptions,
-  EmailQueue,
-} from "./queue.js";
-
+	BatchCompleteSummary,
+	BatchProgressStats,
+	EmailQueue,
+	JobFilterOptions,
+	QueueBackendConfig,
+	QueueEventHandler,
+	QueueEventType,
+	QueueJob,
+	QueueJobStatus,
+	QueueOptions,
+	QueueStats,
+} from './queue.js'
+// Result types (discriminated unions)
+export type {
+	BatchSendResult,
+	BatchSendSuccess,
+	EmailError,
+	EmailErrorCode,
+	Result,
+	SendResult,
+	SendSuccess,
+} from './result.js'
 // Template types
 export type {
-  TemplateRenderOptions,
-  RenderedTemplate,
-  TemplateEntry,
-  TemplateMap,
-} from "./template.js";
-
+	RenderedTemplate,
+	TemplateEntry,
+	TemplateMap,
+	TemplateRenderOptions,
+} from './template.js'
 // Webhook types
 export type {
-  WebhookEventType,
-  WebhookEventData,
-  WebhookEventBase,
-  EmailSentEvent,
-  EmailDeliveredEvent,
-  EmailDeliveryDelayedEvent,
-  BounceInfo,
-  EmailBouncedEvent,
-  EmailComplainedEvent,
-  TrackingEventData,
-  EmailOpenedEvent,
-  EmailClickedEvent,
-  WebhookEvent,
-  WebhookHandler,
-  WebhookVerifyOptions,
-  WebhookError,
-} from "./webhook.js";
+	BounceInfo,
+	EmailBouncedEvent,
+	EmailClickedEvent,
+	EmailComplainedEvent,
+	EmailDeliveredEvent,
+	EmailDeliveryDelayedEvent,
+	EmailOpenedEvent,
+	EmailSentEvent,
+	TrackingEventData,
+	WebhookError,
+	WebhookEvent,
+	WebhookEventBase,
+	WebhookEventData,
+	WebhookEventType,
+	WebhookHandler,
+	WebhookVerifyOptions,
+} from './webhook.js'

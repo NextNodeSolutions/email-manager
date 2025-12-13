@@ -7,8 +7,8 @@ import { render } from '@react-email/render'
 
 import type {
 	EmailTemplateComponent,
-	TemplateRenderOptions,
 	RenderedTemplate,
+	TemplateRenderOptions,
 } from '../types/index.js'
 
 /**

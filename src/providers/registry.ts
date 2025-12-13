@@ -3,10 +3,11 @@
  * Factory pattern for creating email providers
  */
 
-import { createResendProvider, type ResendProviderConfig } from './resend.js'
-
 import type { Resend } from 'resend'
+
 import type { EmailProvider } from '../types/index.js'
+import type { ResendProviderConfig } from './resend.js'
+import { createResendProvider } from './resend.js'
 
 /**
  * Provider type to config mapping
