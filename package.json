@@ -13,6 +13,10 @@
     "templates",
     "typescript"
   ],
+  "homepage": "https://github.com/NextNodeSolutions/email-manager#readme",
+  "bugs": {
+    "url": "https://github.com/NextNodeSolutions/email-manager/issues"
+  },
   "license": "MIT",
   "author": "NextNodeSolutions",
   "files": [
@@ -21,6 +25,10 @@
     "dist/**/*"
   ],
   "main": "./dist/index.js",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/NextNodeSolutions/email-manager.git"
+  },
   "scripts": {
     "prebuild": "pnpm clean",
     "build": "tsc -p tsconfig.build.json && tsc-alias -p tsconfig.build.json",
