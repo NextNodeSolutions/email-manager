@@ -5,6 +5,7 @@
 
 import { Resend } from 'resend'
 
+import { getGlobalRateLimiter } from './lib/rate-limiter.js'
 import type { ProviderConfigMap } from './providers/registry.js'
 import { createProvider } from './providers/registry.js'
 import type { BatchOptions } from './queue/index.js'
@@ -54,10 +55,17 @@ export interface SendOptions {
 /**
  * Batch send options
  * Configures the ephemeral queue used for batch processing
+ *
+ * Inherited from BatchOptions:
+ * - maxRetries: Max retry attempts per email
+ * - rateLimit: Max emails per second
+ * - retryDelay: Initial retry delay in ms
+ * - maxRetryDelay: Max retry delay in ms
+ * - timeout: Batch completion timeout in ms
+ * - onProgress: Progress callback (called after each email)
+ * - onComplete: Completion callback (called when batch finishes)
  */
-export interface BatchSendOptions extends BatchOptions {
-	// BatchOptions includes: concurrency, maxRetries, rateLimit, retryDelay, maxRetryDelay, timeout
-}
+export interface BatchSendOptions extends BatchOptions {}
 
 /**
  * Email manager instance interface
@@ -197,6 +205,12 @@ export const createEmailManager = <P extends keyof ProviderConfigMap>(
 					sentAt: new Date(),
 				},
 			}
+		}
+
+		// Direct send: acquire from global rate limiter first (if configured)
+		const globalLimiter = getGlobalRateLimiter()
+		if (globalLimiter) {
+			await globalLimiter.acquire()
 		}
 
 		return provider.send(finalMessage)
