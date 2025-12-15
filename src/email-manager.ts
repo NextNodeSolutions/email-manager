@@ -7,7 +7,8 @@ import { Resend } from 'resend'
 
 import type { ProviderConfigMap } from './providers/registry.js'
 import { createProvider } from './providers/registry.js'
-import { createQueue } from './queue/index.js'
+import type { BatchOptions } from './queue/index.js'
+import { createEphemeralBatchQueue, createQueue } from './queue/index.js'
 import { renderTemplate } from './templates/renderer.js'
 import type {
 	BatchSendResult,
@@ -41,13 +42,21 @@ export interface EmailManagerConfig<
 }
 
 /**
- * Email manager send options
+ * Email manager send options (single email)
  */
 export interface SendOptions {
 	/** Use queue instead of direct send */
 	useQueue?: boolean
 	/** Schedule for later (if queued) */
 	scheduledFor?: Date
+}
+
+/**
+ * Batch send options
+ * Configures the ephemeral queue used for batch processing
+ */
+export interface BatchSendOptions extends BatchOptions {
+	// BatchOptions includes: concurrency, maxRetries, rateLimit, retryDelay, maxRetryDelay, timeout
 }
 
 /**
@@ -65,10 +74,10 @@ export interface EmailManager {
 		message: TemplatedEmailMessage<TProps>,
 		options?: SendOptions,
 	) => Promise<SendResult>
-	/** Send batch of emails */
+	/** Send batch of emails using ephemeral queue */
 	sendBatch: (
 		messages: EmailMessage[],
-		options?: SendOptions,
+		options?: BatchSendOptions,
 	) => Promise<BatchSendResult>
 	/** Add email to queue */
 	enqueue: (message: EmailMessage, scheduledFor?: Date) => Promise<QueueJob>
@@ -222,45 +231,49 @@ export const createEmailManager = <P extends keyof ProviderConfigMap>(
 
 	const sendBatch = async (
 		messages: EmailMessage[],
-		options: SendOptions = {},
+		options: BatchSendOptions = {},
 	): Promise<BatchSendResult> => {
 		const finalMessages = messages.map(applyDefaults)
 
-		if (options.useQueue && queue) {
-			const jobs = await queue.addBatch(finalMessages)
+		// Create ephemeral SQLite queue for this batch
+		const batchQueue = createEphemeralBatchQueue(provider, options)
+
+		try {
+			// Add all messages to the batch queue
+			await batchQueue.addBatch(finalMessages)
+
+			// Start processing
+			batchQueue.start()
+
+			// Wait for completion (with timeout from options or default)
+			const summary = await batchQueue.waitForCompletion(options.timeout)
 
 			return {
 				success: true,
 				data: {
-					total: jobs.length,
-					successful: jobs.length,
-					failed: 0,
-					results: jobs.map((job, index) => {
-						const msg = messages[index]
-						const recipient = msg
-							? Array.isArray(msg.to)
-								? String(msg.to[0])
-								: String(msg.to)
-							: ''
-
-						return {
-							index,
-							recipient,
-							result: {
-								success: true as const,
-								data: {
-									id: job.id,
-									provider: provider.name,
-									sentAt: new Date(),
-								},
-							},
-						}
-					}),
+					total: summary.totalSent + summary.totalFailed,
+					successful: summary.totalSent,
+					failed: summary.totalFailed,
+					durationMs: summary.durationMs,
 				},
 			}
-		}
+		} catch (error) {
+			// Handle timeout or other errors
+			const errorMessage =
+				error instanceof Error ? error.message : 'Unknown batch error'
 
-		return provider.sendBatch(finalMessages)
+			return {
+				success: false,
+				error: {
+					code: 'PROVIDER_ERROR',
+					message: errorMessage,
+					...(error instanceof Error && { cause: error }),
+				},
+			}
+		} finally {
+			// Always cleanup the ephemeral queue
+			await batchQueue.destroy()
+		}
 	}
 
 	const enqueue = async (

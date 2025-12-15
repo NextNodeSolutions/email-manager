@@ -43,4 +43,9 @@ export const createQueue = (
 	}
 }
 
+export {
+	type BatchOptions,
+	createEphemeralBatchQueue,
+	type EphemeralBatchQueue,
+} from './ephemeral-batch-queue.js'
 export { createMemoryQueue } from './memory-queue.js'

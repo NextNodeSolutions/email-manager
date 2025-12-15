@@ -220,4 +220,7 @@ export interface EmailQueue {
 
 	/** Unsubscribe from queue events */
 	off(event: QueueEventType, handler: QueueEventHandler): void
+
+	/** Destroy queue: stop processing, cleanup resources, delete storage (SQLite only) */
+	destroy(): Promise<void>
 }

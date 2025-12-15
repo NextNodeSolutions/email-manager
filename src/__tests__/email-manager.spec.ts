@@ -35,6 +35,25 @@ vi.mock('../utils/logger.js', () => ({
 	},
 }))
 
+// Mock ephemeral batch queue to avoid SQLite in tests
+vi.mock('../queue/ephemeral-batch-queue.js', () => ({
+	createEphemeralBatchQueue: vi.fn().mockImplementation(() => ({
+		batchId: 'test-batch-id',
+		addBatch: vi.fn().mockResolvedValue([
+			{ id: 'job_1', status: 'pending' },
+			{ id: 'job_2', status: 'pending' },
+		]),
+		start: vi.fn(),
+		waitForCompletion: vi.fn().mockResolvedValue({
+			batchId: 'test-batch-id',
+			totalSent: 2,
+			totalFailed: 0,
+			durationMs: 100,
+		}),
+		destroy: vi.fn().mockResolvedValue(undefined),
+	})),
+}))
+
 // Mock template renderer
 vi.mock('../templates/renderer.js', () => ({
 	renderTemplate: vi.fn().mockResolvedValue({
@@ -204,7 +223,7 @@ describe('EmailManager', () => {
 			}
 		})
 
-		it('should send batch via queue when useQueue option is true', async () => {
+		it('should send batch with custom options', async () => {
 			const manager = createEmailManager({
 				provider: 'resend',
 				providerConfig: { apiKey: 'test-key' },
@@ -219,9 +238,15 @@ describe('EmailManager', () => {
 				},
 			]
 
-			const result = await manager.sendBatch(messages, { useQueue: true })
+			const result = await manager.sendBatch(messages, {
+				concurrency: 10,
+				timeout: 60_000,
+			})
 
 			expect(result.success).toBe(true)
+			if (result.success) {
+				expect(result.data.durationMs).toBeGreaterThanOrEqual(0)
+			}
 		})
 	})
 

@@ -66,8 +66,10 @@ export interface BatchSendSuccess {
 	successful: number
 	/** Failed count */
 	failed: number
-	/** Individual results */
-	results: Array<{
+	/** Processing duration in milliseconds */
+	durationMs: number
+	/** Individual results (when available) */
+	results?: Array<{
 		index: number
 		result: SendResult
 		recipient: string

@@ -225,6 +225,7 @@ export const createResendProvider = (
 						total: 0,
 						successful: 0,
 						failed: 0,
+						durationMs: 0,
 						results: [],
 					},
 				}
@@ -241,6 +242,8 @@ export const createResendProvider = (
 					}
 				}
 			}
+
+			const startTime = Date.now()
 
 			try {
 				const payloads = messages.map(mapToResendPayload)
@@ -292,6 +295,7 @@ export const createResendProvider = (
 						total: messages.length,
 						successful: results.length,
 						failed: 0,
+						durationMs: Date.now() - startTime,
 						results,
 					},
 				}

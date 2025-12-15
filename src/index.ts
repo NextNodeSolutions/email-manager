@@ -10,18 +10,24 @@
  */
 
 export type {
+	BatchSendOptions,
 	EmailManager,
 	EmailManagerConfig,
 	SendOptions,
 } from './email-manager.js'
 // Main API exports
 export { createEmailManager } from './email-manager.js'
+// Constants exports
+export { BATCH_QUEUE_DEFAULTS } from './lib/constants.js'
 export type {
 	ProviderClientMap,
 	ProviderConfigMap,
 } from './providers/registry.js'
 // Provider exports (for advanced usage)
 export { createProvider } from './providers/registry.js'
+export type { BatchOptions, EphemeralBatchQueue } from './queue/index.js'
+// Queue exports (for advanced usage)
+export { createEphemeralBatchQueue } from './queue/index.js'
 // Template exports (for direct usage)
 export { renderTemplate } from './templates/renderer.js'
 // Type exports

@@ -5,7 +5,7 @@
  */
 
 import { randomUUID } from 'node:crypto'
-import { existsSync, mkdirSync } from 'node:fs'
+import { existsSync, mkdirSync, unlinkSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { DatabaseSync } from 'node:sqlite'
 
@@ -74,8 +74,9 @@ const DEFAULT_DATABASE_KEY = 'queue'
 
 /**
  * Get database path using env-paths for cross-platform support
+ * Exported for use by ephemeral batch queue
  */
-const getDatabasePath = (
+export const getDatabasePath = (
 	appName: string,
 	key: string = DEFAULT_DATABASE_KEY,
 ): string => {
@@ -839,6 +840,30 @@ export const createSQLiteQueue = (
 
 		off(event: QueueEventType, handler: QueueEventHandler): void {
 			eventHandlers.get(event)?.delete(handler)
+		},
+
+		async destroy(): Promise<void> {
+			// Graceful shutdown first
+			await gracefulShutdown()
+
+			// Delete database file
+			if (existsSync(databasePath)) {
+				unlinkSync(databasePath)
+				queueLogger.info('Database file deleted', {
+					details: { path: databasePath },
+				})
+			}
+
+			// Also delete WAL and SHM files if they exist
+			const walPath = `${databasePath}-wal`
+			const shmPath = `${databasePath}-shm`
+
+			if (existsSync(walPath)) {
+				unlinkSync(walPath)
+			}
+			if (existsSync(shmPath)) {
+				unlinkSync(shmPath)
+			}
 		},
 	}
 }

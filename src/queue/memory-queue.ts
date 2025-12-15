@@ -375,5 +375,20 @@ export const createMemoryQueue = (
 		off(event: QueueEventType, handler: QueueEventHandler): void {
 			eventHandlers.get(event)?.delete(handler)
 		},
+
+		async destroy(): Promise<void> {
+			// Stop processing
+			isRunning = false
+
+			// Wait for active jobs to complete
+			while (activeCount > 0) {
+				await delay(100)
+			}
+
+			// Clear all data
+			jobs.clear()
+			pending.length = 0
+			eventHandlers.clear()
+		},
 	}
 }
