@@ -173,10 +173,8 @@ vi.mock('../utils/logger.js', () => ({
 Uses `@nextnode/logger` with scoped prefixes:
 
 - `logger` - Main library logger
-- `providerLogger` - Provider operations
-- `queueLogger` - Queue processing
-- `templateLogger` - Template rendering
-- `webhookLogger` - Webhook handling
+- `queueLogger` - Queue processing (prefix: QUEUE)
+- `webhookLogger` - Webhook handling (prefix: WEBHOOK)
 
 ## Default Configuration
 
