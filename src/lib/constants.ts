@@ -8,12 +8,10 @@
  * These values can be overridden by user options
  */
 export const BATCH_QUEUE_DEFAULTS = {
-	/** Max parallel email sends */
-	concurrency: 5,
 	/** Max retry attempts per email */
 	maxRetries: 3,
 	/** Max emails per second (provider rate limit protection) */
-	rateLimit: 10,
+	rateLimit: 2,
 	/** Initial retry delay in milliseconds */
 	retryDelay: 1000,
 	/** Max retry delay in milliseconds */

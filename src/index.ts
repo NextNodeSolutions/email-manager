@@ -20,6 +20,17 @@ export { createEmailManager } from './email-manager.js'
 // Constants exports
 export { BATCH_QUEUE_DEFAULTS } from './lib/constants.js'
 export type {
+	GlobalRateLimiter,
+	RateLimiterConfig,
+	RateLimiterStatus,
+} from './lib/rate-limiter.js'
+// Rate limiter exports
+export {
+	configureGlobalRateLimit,
+	getGlobalRateLimiter,
+	resetGlobalRateLimiter,
+} from './lib/rate-limiter.js'
+export type {
 	ProviderClientMap,
 	ProviderConfigMap,
 } from './providers/registry.js'
