@@ -72,7 +72,7 @@ export interface BatchSendSuccess {
 	results?: Array<{
 		index: number
 		result: SendResult
-		recipient: string
+		recipient?: string | undefined
 	}>
 }
 

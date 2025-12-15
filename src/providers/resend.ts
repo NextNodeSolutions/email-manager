@@ -272,8 +272,8 @@ export const createResendProvider = (
 				const results = data.data.map((result, index) => {
 					const message = messages[index]
 					const recipient = message
-						? (utils.normalizeRecipients(message.to)[0] ?? '')
-						: ''
+						? utils.normalizeRecipients(message.to)[0]
+						: undefined
 
 					return {
 						index,
