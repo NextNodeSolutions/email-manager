@@ -50,6 +50,7 @@
 	},
 	"dependencies": {
 		"@nextnode/logger": "^0.3.0",
+		"@nextnode/validation": "^1.0.0",
 		"@react-email/render": "^2.0.0",
 		"env-paths": "^3.0.0",
 		"resend": "^6.6.0"
@@ -91,7 +92,10 @@
 			"esbuild",
 			"node",
 			"unrs-resolver"
-		]
+		],
+		"overrides": {
+			"@nextnode/validation": "link:../validation"
+		}
 	},
 	"prettier": "@nextnode/standards/prettier",
 	"types": "./dist/index.d.ts"

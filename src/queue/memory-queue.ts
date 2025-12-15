@@ -18,7 +18,7 @@ import type {
 	QueueOptions,
 	QueueStats,
 } from '../types/index.js'
-import { calculateBackoff, delay } from '../utils/index.js'
+import { calculateBackoff, delay, getErrorMessage } from '../utils/index.js'
 import {
 	createQueueEventEmitter,
 	createRateLimitCoordinator,
@@ -179,8 +179,7 @@ export const createMemoryQueue = (
 				throw new Error(result.error.message)
 			}
 		} catch (error) {
-			const errorMessage =
-				error instanceof Error ? error.message : 'Unknown error'
+			const errorMessage = getErrorMessage(error)
 
 			if (job.attempts < job.maxRetries) {
 				job.status = 'retrying'

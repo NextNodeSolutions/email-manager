@@ -26,7 +26,7 @@ import type {
 	QueueStats,
 	SendResult,
 } from '../types/index.js'
-import { calculateBackoff, delay } from '../utils/index.js'
+import { calculateBackoff, delay, getErrorMessage } from '../utils/index.js'
 import { queueLogger } from '../utils/logger.js'
 import type { BatchMonitor } from './batch-monitor.js'
 import { createBatchMonitor } from './batch-monitor.js'
@@ -584,8 +584,7 @@ export const createSQLiteQueue = (
 				throw new Error(result.error.message)
 			}
 		} catch (error) {
-			const errorMessage =
-				error instanceof Error ? error.message : 'Unknown error'
+			const errorMessage = getErrorMessage(error)
 			const newAttempts = job.attempts + 1
 
 			if (newAttempts < job.maxRetries) {

@@ -4,12 +4,18 @@ settings:
     autoInstallPeers: true
     excludeLinksFromLockfile: false
 
+overrides:
+    '@nextnode/validation': link:../validation
+
 importers:
     .:
         dependencies:
             '@nextnode/logger':
                 specifier: ^0.3.0
                 version: 0.3.0(eslint@9.39.2(jiti@2.6.1))
+            '@nextnode/validation':
+                specifier: link:../validation
+                version: link:../validation
             '@react-email/render':
                 specifier: ^2.0.0
                 version: 2.0.0(react-dom@19.2.3(react@19.2.3))(react@19.2.3)

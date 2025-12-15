@@ -18,6 +18,7 @@ import type {
 	WebhookHandler,
 } from '../types/index.js'
 import { webhookFail } from '../types/index.js'
+import { getErrorMessage } from '../utils/index.js'
 import { parseWebhookPayload, verifyWebhookSignature } from './parser.js'
 
 /**
@@ -191,8 +192,7 @@ export const createWebhookHandler = (
 			await handler(event)
 			return { success: true, data: { processed: true, event } }
 		} catch (error) {
-			const message =
-				error instanceof Error ? error.message : 'Handler error'
+			const message = getErrorMessage(error, 'Handler error')
 			return webhookFail('HANDLER_ERROR', message)
 		}
 	}

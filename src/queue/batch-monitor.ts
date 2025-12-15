@@ -3,12 +3,19 @@
  * Tracks batch progress and emits notifications via callbacks or webhooks
  */
 
+import { safeWebhookUrl } from '@nextnode/validation'
+
 import type {
 	BatchCompleteSummary,
 	BatchProgressStats,
 	QueueOptions,
 } from '../types/index.js'
 import { queueLogger } from '../utils/logger.js'
+
+/** Progress notification interval (every N percent) */
+const WEBHOOK_PROGRESS_PERCENT_INTERVAL = 10
+/** Progress notification interval (every N jobs) */
+const WEBHOOK_PROGRESS_COUNT_INTERVAL = 100
 
 /**
  * Batch state for tracking progress
@@ -59,6 +66,15 @@ export const createBatchMonitor = (options: QueueOptions): BatchMonitor => {
 		data: BatchProgressStats | BatchCompleteSummary,
 	): Promise<void> => {
 		if (!options.webhookUrl) return
+
+		// SSRF protection: validate webhook URL
+		const urlResult = safeWebhookUrl.safeParse(options.webhookUrl)
+		if (!urlResult.success) {
+			queueLogger.warn('Invalid webhook URL blocked (SSRF protection)', {
+				details: { url: options.webhookUrl },
+			})
+			return
+		}
 
 		const payload: WebhookPayload = {
 			type: eventType,
@@ -145,13 +161,15 @@ export const createBatchMonitor = (options: QueueOptions): BatchMonitor => {
 			// Notify via callback
 			options.onProgress?.(stats)
 
-			// Notify via webhook (throttled - every 10% or every 100 jobs)
+			// Notify via webhook (throttled)
 			const progressPercent = Math.floor(
 				((batch.completed + batch.failed) / batch.total) * 100,
 			)
 			const shouldNotify =
-				progressPercent % 10 === 0 ||
-				(batch.completed + batch.failed) % 100 === 0
+				progressPercent % WEBHOOK_PROGRESS_PERCENT_INTERVAL === 0 ||
+				(batch.completed + batch.failed) %
+					WEBHOOK_PROGRESS_COUNT_INTERVAL ===
+					0
 
 			if (shouldNotify) {
 				void sendWebhook('batch.progress', stats)
