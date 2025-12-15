@@ -3,6 +3,19 @@
  */
 
 /**
+ * Extract error message from unknown error
+ * Standardizes error message extraction across the codebase
+ *
+ * @param error - Unknown error value
+ * @param fallback - Fallback message if error is not an Error instance
+ * @returns Error message string
+ */
+export const getErrorMessage = (
+	error: unknown,
+	fallback = 'Unknown error',
+): string => (error instanceof Error ? error.message : fallback)
+
+/**
  * Delay execution for specified milliseconds
  * @param ms - Milliseconds to wait
  * @returns Promise that resolves after delay
