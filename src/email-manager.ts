@@ -3,11 +3,9 @@
  * Main facade for email operations - the primary public API
  */
 
-import { Resend } from 'resend'
-
 import { getGlobalRateLimiter } from './lib/rate-limiter.js'
 import type { ProviderConfigMap } from './providers/registry.js'
-import { createProvider } from './providers/registry.js'
+import { createProvider, createProviderClient } from './providers/registry.js'
 import type { BatchOptions } from './queue/index.js'
 import { createEphemeralBatchQueue, createQueue } from './queue/index.js'
 import { renderTemplate } from './templates/renderer.js'
@@ -80,21 +78,6 @@ export interface EmailManager {
 	stopQueue: () => Promise<void>
 	/** Validate provider configuration */
 	validateConfig: () => Promise<boolean>
-}
-
-/**
- * Create provider client based on provider name
- */
-const createProviderClient = <P extends keyof ProviderConfigMap>(
-	name: P,
-	config: ProviderConfigMap[P],
-): Resend => {
-	switch (name) {
-		case 'resend':
-			return new Resend(config.apiKey)
-		default:
-			throw new Error(`Unknown provider: ${name}`)
-	}
 }
 
 /**

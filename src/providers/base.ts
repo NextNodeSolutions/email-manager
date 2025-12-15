@@ -4,9 +4,11 @@
  */
 
 import type {
+	EmailError,
 	EmailMessage,
 	EmailRecipient,
 	ProviderConfig,
+	Result,
 } from '../types/index.js'
 
 /**
@@ -32,7 +34,7 @@ export interface ProviderUtils {
 	normalizeRecipients: (
 		recipients: EmailRecipient | EmailRecipient[],
 	) => string[]
-	validateMessage: (message: EmailMessage) => void
+	validateMessage: (message: EmailMessage) => Result<void, EmailError>
 }
 
 /**
@@ -57,20 +59,46 @@ const normalizeRecipients = (
 
 /**
  * Validate email message has required fields
+ * Returns Result pattern for consistent error handling
  */
-const validateMessage = (message: EmailMessage): void => {
+const validateMessage = (message: EmailMessage): Result<void, EmailError> => {
 	if (!message.from) {
-		throw new Error('Missing required field: from')
+		return {
+			success: false,
+			error: {
+				code: 'VALIDATION_ERROR',
+				message: 'Missing required field: from',
+			},
+		}
 	}
 	if (!message.to) {
-		throw new Error('Missing required field: to')
+		return {
+			success: false,
+			error: {
+				code: 'VALIDATION_ERROR',
+				message: 'Missing required field: to',
+			},
+		}
 	}
 	if (!message.subject) {
-		throw new Error('Missing required field: subject')
+		return {
+			success: false,
+			error: {
+				code: 'VALIDATION_ERROR',
+				message: 'Missing required field: subject',
+			},
+		}
 	}
 	if (!message.html && !message.text) {
-		throw new Error('Either html or text content is required')
+		return {
+			success: false,
+			error: {
+				code: 'VALIDATION_ERROR',
+				message: 'Either html or text content is required',
+			},
+		}
 	}
+	return { success: true, data: undefined }
 }
 
 /**

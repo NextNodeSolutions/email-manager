@@ -114,8 +114,6 @@ export interface QueueOptions {
 	maxRetryDelay?: number
 	/** Rate limit: emails per second */
 	rateLimit?: number
-	/** Batch processing size */
-	batchSize?: number
 	/** Storage backend configuration (default: memory) */
 	backendConfig?: QueueBackendConfig
 	/** Progress callback for batch monitoring */

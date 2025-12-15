@@ -48,4 +48,3 @@ export {
 	createEphemeralBatchQueue,
 	type EphemeralBatchQueue,
 } from './ephemeral-batch-queue.js'
-export { createMemoryQueue } from './memory-queue.js'

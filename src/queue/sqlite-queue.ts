@@ -11,7 +11,7 @@ import { DatabaseSync } from 'node:sqlite'
 
 import envPaths from 'env-paths'
 
-import { QUEUE_DEFAULT_OPTIONS } from '../lib/constants.js'
+import { QUEUE_DEFAULTS } from '../lib/constants.js'
 import { createTokenBucket } from '../lib/rate-limiter.js'
 import type {
 	EmailMessage,
@@ -69,9 +69,8 @@ const DEFAULT_DATABASE_KEY = 'queue'
 
 /**
  * Get database path using env-paths for cross-platform support
- * Exported for use by ephemeral batch queue
  */
-export const getDatabasePath = (
+const getDatabasePath = (
 	appName: string,
 	key: string = DEFAULT_DATABASE_KEY,
 ): string => {
@@ -147,7 +146,7 @@ export const createSQLiteQueue = (
 	backendConfig: SQLiteBackendConfig,
 	options: QueueOptions = {},
 ): EmailQueue => {
-	const config = { ...QUEUE_DEFAULT_OPTIONS, ...options }
+	const config = { ...QUEUE_DEFAULTS, ...options }
 	const retentionHours =
 		backendConfig.retentionHours ?? DEFAULT_RETENTION_HOURS
 	const databasePath = getDatabasePath(

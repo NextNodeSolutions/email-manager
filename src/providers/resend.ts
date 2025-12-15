@@ -165,7 +165,10 @@ export const createResendProvider = (
 		name: 'resend',
 
 		async send(message: EmailMessage): Promise<SendResult> {
-			utils.validateMessage(message)
+			const validation = utils.validateMessage(message)
+			if (!validation.success) {
+				return validation
+			}
 
 			try {
 				const payload = mapToResendPayload(message)
@@ -233,13 +236,9 @@ export const createResendProvider = (
 
 			// Validate all messages first
 			for (const message of messages) {
-				try {
-					utils.validateMessage(message)
-				} catch (error) {
-					return {
-						success: false,
-						error: mapResendError(error),
-					}
+				const validation = utils.validateMessage(message)
+				if (!validation.success) {
+					return validation
 				}
 			}
 

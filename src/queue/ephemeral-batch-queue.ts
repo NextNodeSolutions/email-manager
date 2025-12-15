@@ -5,7 +5,7 @@
 
 import { randomUUID } from 'node:crypto'
 
-import { BATCH_QUEUE_DEFAULTS } from '../lib/constants.js'
+import { QUEUE_DEFAULTS } from '../lib/constants.js'
 import type {
 	BatchCompleteSummary,
 	BatchProgressStats,
@@ -87,12 +87,11 @@ export const createEphemeralBatchQueue = (
 
 	// Merge user options with defaults
 	const config = {
-		maxRetries: options.maxRetries ?? BATCH_QUEUE_DEFAULTS.maxRetries,
-		rateLimit: options.rateLimit ?? BATCH_QUEUE_DEFAULTS.rateLimit,
-		retryDelay: options.retryDelay ?? BATCH_QUEUE_DEFAULTS.retryDelay,
-		maxRetryDelay:
-			options.maxRetryDelay ?? BATCH_QUEUE_DEFAULTS.maxRetryDelay,
-		timeout: options.timeout ?? BATCH_QUEUE_DEFAULTS.timeout,
+		maxRetries: options.maxRetries ?? QUEUE_DEFAULTS.maxRetries,
+		rateLimit: options.rateLimit ?? QUEUE_DEFAULTS.rateLimit,
+		retryDelay: options.retryDelay ?? QUEUE_DEFAULTS.retryDelay,
+		maxRetryDelay: options.maxRetryDelay ?? QUEUE_DEFAULTS.maxRetryDelay,
+		timeout: options.timeout ?? QUEUE_DEFAULTS.timeout,
 	}
 
 	// Deferred pattern for completion - no polling

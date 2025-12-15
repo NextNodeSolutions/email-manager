@@ -184,9 +184,3 @@ export const parseWebhookPayload = (
 		}
 	}
 }
-
-/**
- * Check if an event type is valid
- */
-export const isValidEventType = (type: string): type is WebhookEventType =>
-	VALID_EVENT_TYPES.includes(type as WebhookEventType)

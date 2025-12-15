@@ -8,11 +8,6 @@ import { createLogger } from '@nextnode/logger'
 /** Main library logger */
 export const logger = createLogger()
 
-/** Provider operations logger */
-export const providerLogger = createLogger({
-	prefix: 'PROVIDER',
-})
-
 /** Queue operations logger */
 export const queueLogger = createLogger({
 	prefix: 'QUEUE',
@@ -21,9 +16,4 @@ export const queueLogger = createLogger({
 /** Webhook operations logger */
 export const webhookLogger = createLogger({
 	prefix: 'WEBHOOK',
-})
-
-/** Template rendering logger */
-export const templateLogger = createLogger({
-	prefix: 'TEMPLATE',
 })

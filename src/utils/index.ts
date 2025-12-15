@@ -27,6 +27,3 @@ export const calculateBackoff = (
 	const jitter = baseDelay * Math.random() * 0.25
 	return Math.min(baseDelay + jitter, maxRetryDelay)
 }
-
-// Export logger utilities
-export * from './logger.js'

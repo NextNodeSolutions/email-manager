@@ -9,7 +9,6 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { createWebhookHandler } from '../webhooks/handler.js'
 import {
-	isValidEventType,
 	parseWebhookPayload,
 	verifyWebhookSignature,
 } from '../webhooks/parser.js'
@@ -200,22 +199,6 @@ describe('Webhook Parser', () => {
 			if (!result.success) {
 				expect(result.error.code).toBe('INVALID_PAYLOAD')
 			}
-		})
-	})
-
-	describe('isValidEventType', () => {
-		it('should return true for valid event types', () => {
-			expect(isValidEventType('email.sent')).toBe(true)
-			expect(isValidEventType('email.delivered')).toBe(true)
-			expect(isValidEventType('email.bounced')).toBe(true)
-			expect(isValidEventType('email.complained')).toBe(true)
-			expect(isValidEventType('email.opened')).toBe(true)
-			expect(isValidEventType('email.clicked')).toBe(true)
-		})
-
-		it('should return false for invalid event types', () => {
-			expect(isValidEventType('invalid')).toBe(false)
-			expect(isValidEventType('email.unknown')).toBe(false)
 		})
 	})
 })

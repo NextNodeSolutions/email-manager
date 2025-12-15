@@ -5,7 +5,7 @@
 
 import { randomUUID } from 'node:crypto'
 
-import { QUEUE_DEFAULT_OPTIONS } from '../lib/constants.js'
+import { QUEUE_DEFAULTS } from '../lib/constants.js'
 import { createTokenBucket } from '../lib/rate-limiter.js'
 import type {
 	EmailMessage,
@@ -46,7 +46,7 @@ export const createMemoryQueue = (
 	provider: EmailProvider,
 	options: QueueOptions = {},
 ): EmailQueue => {
-	const config = { ...QUEUE_DEFAULT_OPTIONS, ...options }
+	const config = { ...QUEUE_DEFAULTS, ...options }
 	const jobs = new Map<string, QueueJob>()
 	const pending: string[] = []
 

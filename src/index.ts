@@ -17,7 +17,7 @@ export type {
 // Main API exports
 export { createEmailManager } from './email-manager.js'
 // Constants exports
-export { BATCH_QUEUE_DEFAULTS } from './lib/constants.js'
+export { QUEUE_DEFAULTS } from './lib/constants.js'
 export type {
 	RateLimiterConfig,
 	RateLimiterStatus,
@@ -90,13 +90,7 @@ export type {
 	WebhookVerifyOptions,
 } from './types/index.js'
 // Logger exports (for debugging)
-export {
-	logger,
-	providerLogger,
-	queueLogger,
-	templateLogger,
-	webhookLogger,
-} from './utils/logger.js'
+export { logger, queueLogger, webhookLogger } from './utils/logger.js'
 export type {
 	ProcessResult,
 	WebhookHandlerConfig,

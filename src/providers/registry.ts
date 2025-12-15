@@ -3,7 +3,7 @@
  * Factory pattern for creating email providers
  */
 
-import type { Resend } from 'resend'
+import { Resend } from 'resend'
 
 import type { EmailProvider } from '../types/index.js'
 import type { ResendProviderConfig } from './resend.js'
@@ -26,6 +26,23 @@ export interface ProviderConfigMap {
 export interface ProviderClientMap {
 	resend: Resend
 	// Future providers would have their SDK types here
+}
+
+/**
+ * Create provider SDK client based on provider name
+ * @param name - Provider name
+ * @param config - Provider configuration
+ */
+export function createProviderClient<K extends keyof ProviderConfigMap>(
+	name: K,
+	config: ProviderConfigMap[K],
+): ProviderClientMap[K] {
+	switch (name) {
+		case 'resend':
+			return new Resend(config.apiKey) as ProviderClientMap[K]
+		default:
+			throw new Error(`Unknown provider: ${name}`)
+	}
 }
 
 /**
