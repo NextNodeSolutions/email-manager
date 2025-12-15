@@ -5,6 +5,7 @@
 
 import { randomUUID } from 'node:crypto'
 
+import { createTokenBucket, getGlobalRateLimiter } from '../lib/rate-limiter.js'
 import type {
 	EmailMessage,
 	EmailProvider,
@@ -21,11 +22,10 @@ import type {
  * Default queue options (core processing options only)
  */
 const DEFAULT_OPTIONS = {
-	concurrency: 5,
 	maxRetries: 3,
 	retryDelay: 1000,
 	maxRetryDelay: 60000,
-	rateLimit: 10, // 10 emails per second
+	rateLimit: 2, // 2 emails per second (Resend default)
 	batchSize: 10,
 } as const
 
@@ -45,7 +45,6 @@ const delay = (ms: number): Promise<void> =>
  * @example
  * ```typescript
  * const queue = createMemoryQueue(provider, {
- *   concurrency: 5,
  *   maxRetries: 3,
  *   rateLimit: 10
  * })
@@ -65,8 +64,13 @@ export const createMemoryQueue = (
 
 	let isRunning = false
 	let isPaused = false
-	let activeCount = 0
-	let lastSendTime = 0
+	let isProcessing = false
+
+	// Token bucket for local rate limiting (strict sequential with no burst)
+	const localRateLimiter = createTokenBucket({
+		limit: config.rateLimit,
+		burstCapacity: 1,
+	})
 
 	/**
 	 * Emit event to all registered handlers
@@ -94,14 +98,17 @@ export const createMemoryQueue = (
 
 	/**
 	 * Wait for rate limit
+	 * Applies global rate limiter first (if configured), then local token bucket rate limiting
 	 */
 	const waitForRateLimit = async (): Promise<void> => {
-		const minInterval = 1000 / config.rateLimit
-		const elapsed = Date.now() - lastSendTime
-		if (elapsed < minInterval) {
-			await delay(minInterval - elapsed)
+		// Global rate limiter takes priority (shared across all instances)
+		const globalLimiter = getGlobalRateLimiter()
+		if (globalLimiter) {
+			await globalLimiter.acquire()
 		}
-		lastSendTime = Date.now()
+
+		// Local rate limit: token bucket with strict sequential (no burst)
+		await localRateLimiter.acquire()
 	}
 
 	/**
@@ -147,9 +154,9 @@ export const createMemoryQueue = (
 	/**
 	 * Check if queue can process more jobs
 	 */
-	const canProcessMore = (): boolean => {
+	const canProcess = (): boolean => {
 		if (!isRunning || isPaused) return false
-		if (activeCount >= config.concurrency) return false
+		if (isProcessing) return false
 		return true
 	}
 
@@ -171,12 +178,10 @@ export const createMemoryQueue = (
 	 * Process next job in queue
 	 */
 	const processNext = (): void => {
-		if (!canProcessMore()) return
+		if (!canProcess()) return
 
 		if (pending.length === 0) {
-			if (activeCount === 0) {
-				emit('queue:drained', { stats: getStatsSync() })
-			}
+			emit('queue:drained', { stats: getStatsSync() })
 			return
 		}
 
@@ -188,7 +193,7 @@ export const createMemoryQueue = (
 
 		if (scheduleForLater(jobId, job)) return
 
-		activeCount += 1
+		isProcessing = true
 		processJob(jobId)
 	}
 
@@ -198,7 +203,7 @@ export const createMemoryQueue = (
 	const processJob = async (jobId: string): Promise<void> => {
 		const job = jobs.get(jobId)
 		if (!job || job.status === 'completed') {
-			activeCount -= 1
+			isProcessing = false
 			processNext()
 			return
 		}
@@ -244,7 +249,7 @@ export const createMemoryQueue = (
 				emit('job:failed', { job, error: errorMessage })
 			}
 		} finally {
-			activeCount -= 1
+			isProcessing = false
 			processNext()
 		}
 	}
@@ -325,17 +330,15 @@ export const createMemoryQueue = (
 				}
 			}
 
-			// Start processing pending jobs
-			for (let i = 0; i < config.concurrency; i++) {
-				processNext()
-			}
+			// Start processing (sequential, one at a time)
+			processNext()
 		},
 
 		async stop(): Promise<void> {
 			isRunning = false
 
-			// Wait for active jobs to complete
-			while (activeCount > 0) {
+			// Wait for active job to complete
+			while (isProcessing) {
 				await delay(100)
 			}
 		},
@@ -346,10 +349,7 @@ export const createMemoryQueue = (
 
 		resume(): void {
 			isPaused = false
-
-			for (let i = 0; i < config.concurrency; i++) {
-				processNext()
-			}
+			processNext()
 		},
 
 		async clear(): Promise<number> {
@@ -380,8 +380,8 @@ export const createMemoryQueue = (
 			// Stop processing
 			isRunning = false
 
-			// Wait for active jobs to complete
-			while (activeCount > 0) {
+			// Wait for active job to complete
+			while (isProcessing) {
 				await delay(100)
 			}
 
@@ -389,6 +389,9 @@ export const createMemoryQueue = (
 			jobs.clear()
 			pending.length = 0
 			eventHandlers.clear()
+
+			// Cleanup rate limiter
+			localRateLimiter.destroy()
 		},
 	}
 }

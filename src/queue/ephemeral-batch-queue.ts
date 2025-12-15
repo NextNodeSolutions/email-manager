@@ -8,6 +8,7 @@ import { randomUUID } from 'node:crypto'
 import { BATCH_QUEUE_DEFAULTS } from '../lib/constants.js'
 import type {
 	BatchCompleteSummary,
+	BatchProgressStats,
 	EmailMessage,
 	EmailProvider,
 	EmailQueue,
@@ -20,8 +21,6 @@ import { createSQLiteQueue } from './sqlite-queue.js'
  * Batch processing options (user-configurable)
  */
 export interface BatchOptions {
-	/** Max parallel email sends */
-	concurrency?: number
 	/** Max retry attempts per email */
 	maxRetries?: number
 	/** Max emails per second (provider rate limit protection) */
@@ -32,6 +31,10 @@ export interface BatchOptions {
 	maxRetryDelay?: number
 	/** Timeout for batch completion in milliseconds */
 	timeout?: number
+	/** Progress callback (called after each email completes) */
+	onProgress?: (stats: BatchProgressStats) => void
+	/** Completion callback (called when batch finishes) */
+	onComplete?: (summary: BatchCompleteSummary) => void
 }
 
 /**
@@ -66,7 +69,7 @@ export interface EphemeralBatchQueue {
  *
  * @example
  * ```typescript
- * const batch = createEphemeralBatchQueue(provider, { concurrency: 10 })
+ * const batch = createEphemeralBatchQueue(provider, { rateLimit: 2 })
  *
  * await batch.addBatch(messages)
  * batch.start()
@@ -84,7 +87,6 @@ export const createEphemeralBatchQueue = (
 
 	// Merge user options with defaults
 	const config = {
-		concurrency: options.concurrency ?? BATCH_QUEUE_DEFAULTS.concurrency,
 		maxRetries: options.maxRetries ?? BATCH_QUEUE_DEFAULTS.maxRetries,
 		rateLimit: options.rateLimit ?? BATCH_QUEUE_DEFAULTS.rateLimit,
 		retryDelay: options.retryDelay ?? BATCH_QUEUE_DEFAULTS.retryDelay,
@@ -109,6 +111,26 @@ export const createEphemeralBatchQueue = (
 	let queue: EmailQueue
 
 	const initQueue = (): EmailQueue => {
+		// Handle internal completion + user callback
+		const handleComplete = (summary: BatchCompleteSummary): void => {
+			// Call user callback first
+			options.onComplete?.(summary)
+
+			// Then resolve internal completion promise
+			if (!isCompleted) {
+				isCompleted = true
+				queueLogger.info('Ephemeral batch completed', {
+					details: {
+						batchId,
+						sent: summary.totalSent,
+						failed: summary.totalFailed,
+						durationMs: summary.durationMs,
+					},
+				})
+				resolveCompletion(summary)
+			}
+		}
+
 		return createSQLiteQueue(
 			provider,
 			{
@@ -119,25 +141,13 @@ export const createEphemeralBatchQueue = (
 				retentionHours: 1,
 			},
 			{
-				concurrency: config.concurrency,
 				maxRetries: config.maxRetries,
 				rateLimit: config.rateLimit,
 				retryDelay: config.retryDelay,
 				maxRetryDelay: config.maxRetryDelay,
-				onComplete: summary => {
-					if (!isCompleted) {
-						isCompleted = true
-						queueLogger.info('Ephemeral batch completed', {
-							details: {
-								batchId,
-								sent: summary.totalSent,
-								failed: summary.totalFailed,
-								durationMs: summary.durationMs,
-							},
-						})
-						resolveCompletion(summary)
-					}
-				},
+				// Conditionally spread callbacks to avoid undefined with exactOptionalPropertyTypes
+				...(options.onProgress && { onProgress: options.onProgress }),
+				onComplete: handleComplete,
 			},
 		)
 	}

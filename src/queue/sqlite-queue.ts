@@ -11,6 +11,7 @@ import { DatabaseSync } from 'node:sqlite'
 
 import envPaths from 'env-paths'
 
+import { createTokenBucket, getGlobalRateLimiter } from '../lib/rate-limiter.js'
 import type {
 	EmailMessage,
 	EmailProvider,
@@ -54,11 +55,10 @@ interface QueueRow {
  * Default queue options
  */
 const DEFAULT_OPTIONS = {
-	concurrency: 5,
 	maxRetries: 3,
 	retryDelay: 1000,
 	maxRetryDelay: 60000,
-	rateLimit: 10,
+	rateLimit: 2, // 2 emails per second (Resend default)
 	batchSize: 10,
 }
 
@@ -170,9 +170,14 @@ export const createSQLiteQueue = (
 	let db: DatabaseSync
 	let isRunning = false
 	let isPaused = false
-	let activeCount = 0
-	let lastSendTime = 0
+	let isProcessing = false
 	let cleanupInterval: NodeJS.Timeout | null = null
+
+	// Token bucket for local rate limiting (strict sequential with no burst)
+	const localRateLimiter = createTokenBucket({
+		limit: config.rateLimit,
+		burstCapacity: 1,
+	})
 
 	// Queue instance reference for global shutdown handler
 	let queueInstance: ShutdownableQueue | null = null
@@ -296,18 +301,16 @@ export const createSQLiteQueue = (
 
 		isRunning = false
 
-		// Wait for active jobs to complete (max 30 seconds)
+		// Wait for active job to complete (max 30 seconds)
 		const maxWait = 30000
 		const startTime = Date.now()
 
-		while (activeCount > 0 && Date.now() - startTime < maxWait) {
+		while (isProcessing && Date.now() - startTime < maxWait) {
 			await delay(100)
 		}
 
-		if (activeCount > 0) {
-			queueLogger.warn('Shutdown timeout, some jobs may be interrupted', {
-				details: { activeCount },
-			})
+		if (isProcessing) {
+			queueLogger.warn('Shutdown timeout, job may be interrupted')
 		}
 
 		// Stop cleanup interval
@@ -315,6 +318,9 @@ export const createSQLiteQueue = (
 			clearInterval(cleanupInterval)
 			cleanupInterval = null
 		}
+
+		// Cleanup rate limiter
+		localRateLimiter.destroy()
 
 		// Close database
 		if (db) {
@@ -367,14 +373,17 @@ export const createSQLiteQueue = (
 
 	/**
 	 * Wait for rate limit
+	 * Applies global rate limiter first (if configured), then local token bucket rate limiting
 	 */
 	const waitForRateLimit = async (): Promise<void> => {
-		const minInterval = 1000 / config.rateLimit
-		const elapsed = Date.now() - lastSendTime
-		if (elapsed < minInterval) {
-			await delay(minInterval - elapsed)
+		// Global rate limiter takes priority (shared across all instances)
+		const globalLimiter = getGlobalRateLimiter()
+		if (globalLimiter) {
+			await globalLimiter.acquire()
 		}
-		lastSendTime = Date.now()
+
+		// Local rate limit: token bucket with strict sequential (no burst)
+		await localRateLimiter.acquire()
 	}
 
 	/**
@@ -525,17 +534,15 @@ export const createSQLiteQueue = (
 	 */
 	const processNext = (): void => {
 		if (!isRunning || isPaused) return
-		if (activeCount >= config.concurrency) return
+		if (isProcessing) return
 
 		const row = getNextPendingJob()
 		if (!row) {
-			if (activeCount === 0) {
-				emit('queue:drained', { stats: getStatsSync() })
-			}
+			emit('queue:drained', { stats: getStatsSync() })
 			return
 		}
 
-		activeCount += 1
+		isProcessing = true
 		processJob(row.id, row)
 	}
 
@@ -630,7 +637,7 @@ export const createSQLiteQueue = (
 				handleJobFailure(jobId, job, errorMessage)
 			}
 		} finally {
-			activeCount -= 1
+			isProcessing = false
 			processNext()
 		}
 	}
@@ -742,10 +749,7 @@ export const createSQLiteQueue = (
 			}
 
 			if (isRunning && !isPaused) {
-				// Start multiple processing workers
-				for (let i = 0; i < config.concurrency; i++) {
-					processNext()
-				}
+				processNext()
 			}
 
 			return jobs
@@ -796,17 +800,15 @@ export const createSQLiteQueue = (
 			// Restore interrupted jobs (standard queue behavior)
 			restoreInterruptedJobs()
 
-			// Start processing pending jobs
-			for (let i = 0; i < config.concurrency; i++) {
-				processNext()
-			}
+			// Start processing (sequential, one at a time)
+			processNext()
 		},
 
 		async stop(): Promise<void> {
 			isRunning = false
 
-			// Wait for active jobs to complete
-			while (activeCount > 0) {
+			// Wait for active job to complete
+			while (isProcessing) {
 				await delay(100)
 			}
 		},
@@ -817,10 +819,7 @@ export const createSQLiteQueue = (
 
 		resume(): void {
 			isPaused = false
-
-			for (let i = 0; i < config.concurrency; i++) {
-				processNext()
-			}
+			processNext()
 		},
 
 		async clear(): Promise<number> {

@@ -106,8 +106,6 @@ export interface BatchCompleteSummary {
  * Queue options
  */
 export interface QueueOptions {
-	/** Max concurrent sends */
-	concurrency?: number
 	/** Max retries per email */
 	maxRetries?: number
 	/** Initial retry delay (ms) */
