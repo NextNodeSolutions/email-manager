@@ -3,6 +3,7 @@
  * Token Bucket algorithm implementation for coordinating rate limits across all email sends
  */
 
+import { delay } from '../utils/index.js'
 import { logger } from '../utils/logger.js'
 
 /**
@@ -41,17 +42,6 @@ export interface TokenBucket {
 	/** Shutdown and release resources */
 	destroy(): void
 }
-
-/**
- * Global rate limiter interface (alias for TokenBucket)
- */
-export type GlobalRateLimiter = TokenBucket
-
-/**
- * Simple delay utility
- */
-const delay = (ms: number): Promise<void> =>
-	new Promise(resolve => setTimeout(resolve, ms))
 
 /**
  * Create a token bucket rate limiter
@@ -131,7 +121,7 @@ export const createTokenBucket = (config: RateLimiterConfig): TokenBucket => {
 }
 
 // Module-level singleton
-let globalRateLimiter: GlobalRateLimiter | null = null
+let globalRateLimiter: TokenBucket | null = null
 
 /**
  * Configure the global rate limiter
@@ -184,10 +174,9 @@ export const configureGlobalRateLimit = (config: RateLimiterConfig): void => {
  *
  * Returns null if not configured.
  *
- * @returns GlobalRateLimiter or null
+ * @returns TokenBucket or null
  */
-export const getGlobalRateLimiter = (): GlobalRateLimiter | null =>
-	globalRateLimiter
+export const getGlobalRateLimiter = (): TokenBucket | null => globalRateLimiter
 
 /**
  * Reset the global rate limiter

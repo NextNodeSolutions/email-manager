@@ -53,21 +53,6 @@ export interface SendOptions {
 }
 
 /**
- * Batch send options
- * Configures the ephemeral queue used for batch processing
- *
- * Inherited from BatchOptions:
- * - maxRetries: Max retry attempts per email
- * - rateLimit: Max emails per second
- * - retryDelay: Initial retry delay in ms
- * - maxRetryDelay: Max retry delay in ms
- * - timeout: Batch completion timeout in ms
- * - onProgress: Progress callback (called after each email)
- * - onComplete: Completion callback (called when batch finishes)
- */
-export interface BatchSendOptions extends BatchOptions {}
-
-/**
  * Email manager instance interface
  */
 export interface EmailManager {
@@ -85,7 +70,7 @@ export interface EmailManager {
 	/** Send batch of emails using ephemeral queue */
 	sendBatch: (
 		messages: EmailMessage[],
-		options?: BatchSendOptions,
+		options?: BatchOptions,
 	) => Promise<BatchSendResult>
 	/** Add email to queue */
 	enqueue: (message: EmailMessage, scheduledFor?: Date) => Promise<QueueJob>
@@ -245,7 +230,7 @@ export const createEmailManager = <P extends keyof ProviderConfigMap>(
 
 	const sendBatch = async (
 		messages: EmailMessage[],
-		options: BatchSendOptions = {},
+		options: BatchOptions = {},
 	): Promise<BatchSendResult> => {
 		const finalMessages = messages.map(applyDefaults)
 

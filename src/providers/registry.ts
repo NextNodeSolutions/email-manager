@@ -49,18 +49,3 @@ export function createProvider<K extends keyof ProviderConfigMap>(
 			throw new Error(`Unknown provider: ${name}`)
 	}
 }
-
-/**
- * Get list of supported providers
- */
-export const getSupportedProviders = (): Array<keyof ProviderConfigMap> => [
-	'resend',
-]
-
-/**
- * Check if a provider is supported
- */
-export const isProviderSupported = (
-	name: string,
-): name is keyof ProviderConfigMap =>
-	getSupportedProviders().includes(name as keyof ProviderConfigMap)

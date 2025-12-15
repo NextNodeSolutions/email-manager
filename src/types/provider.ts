@@ -41,8 +41,3 @@ export interface EmailProvider {
 	 */
 	validateConfig(): Promise<boolean>
 }
-
-/**
- * Provider factory function type
- */
-export type ProviderFactory = (config: ProviderConfig) => EmailProvider

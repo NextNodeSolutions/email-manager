@@ -11,6 +11,7 @@ import { DatabaseSync } from 'node:sqlite'
 
 import envPaths from 'env-paths'
 
+import { QUEUE_DEFAULT_OPTIONS } from '../lib/constants.js'
 import { createTokenBucket, getGlobalRateLimiter } from '../lib/rate-limiter.js'
 import type {
 	EmailMessage,
@@ -25,6 +26,7 @@ import type {
 	QueueStats,
 	SendResult,
 } from '../types/index.js'
+import { calculateBackoff, delay } from '../utils/index.js'
 import { queueLogger } from '../utils/logger.js'
 import type { BatchMonitor } from './batch-monitor.js'
 import { createBatchMonitor } from './batch-monitor.js'
@@ -49,17 +51,6 @@ interface QueueRow {
 	scheduled_for: number | null
 	result: string | null
 	error: string | null
-}
-
-/**
- * Default queue options
- */
-const DEFAULT_OPTIONS = {
-	maxRetries: 3,
-	retryDelay: 1000,
-	maxRetryDelay: 60000,
-	rateLimit: 2, // 2 emails per second (Resend default)
-	batchSize: 10,
 }
 
 /**
@@ -114,12 +105,6 @@ const registerGlobalShutdownHandler = (): void => {
 }
 
 /**
- * Simple delay utility
- */
-const delay = (ms: number): Promise<void> =>
-	new Promise(resolve => setTimeout(resolve, ms))
-
-/**
  * Convert database row to QueueJob
  */
 const rowToJob = (row: QueueRow): QueueJob => ({
@@ -158,7 +143,7 @@ export const createSQLiteQueue = (
 	backendConfig: SQLiteBackendConfig,
 	options: QueueOptions = {},
 ): EmailQueue => {
-	const config = { ...DEFAULT_OPTIONS, ...options }
+	const config = { ...QUEUE_DEFAULT_OPTIONS, ...options }
 	const retentionHours =
 		backendConfig.retentionHours ?? DEFAULT_RETENTION_HOURS
 	const databasePath = getDatabasePath(
@@ -360,15 +345,6 @@ export const createSQLiteQueue = (
 				// Silently ignore handler errors
 			}
 		})
-	}
-
-	/**
-	 * Calculate exponential backoff delay with jitter
-	 */
-	const calculateBackoff = (attempt: number): number => {
-		const baseDelay = config.retryDelay * 2 ** (attempt - 1)
-		const jitter = baseDelay * Math.random() * 0.25
-		return Math.min(baseDelay + jitter, config.maxRetryDelay)
 	}
 
 	/**
@@ -575,7 +551,11 @@ export const createSQLiteQueue = (
 		errorMessage: string,
 		newAttempts: number,
 	): void => {
-		const backoffDelay = calculateBackoff(newAttempts)
+		const backoffDelay = calculateBackoff(
+			newAttempts,
+			config.retryDelay,
+			config.maxRetryDelay,
+		)
 
 		updateJobStatus(jobId, 'retrying', { error: errorMessage })
 		emit('job:retry', { job, nextRetryIn: backoffDelay })

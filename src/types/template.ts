@@ -3,8 +3,6 @@
  * Types for React Email template rendering
  */
 
-import type { EmailTemplateComponent } from './email.js'
-
 /**
  * Template render options
  */
@@ -24,20 +22,3 @@ export interface RenderedTemplate {
 	/** Plain text content (if generated) */
 	text?: string | undefined
 }
-
-/**
- * Template registry entry
- */
-export interface TemplateEntry<TProps = Record<string, unknown>> {
-	/** Template component */
-	component: EmailTemplateComponent<TProps>
-	/** Template name/identifier */
-	name: string
-	/** Default props (optional) */
-	defaultProps?: Partial<TProps>
-}
-
-/**
- * Type-safe template map
- */
-export type TemplateMap = Record<string, TemplateEntry>

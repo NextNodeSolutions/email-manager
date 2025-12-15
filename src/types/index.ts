@@ -14,11 +14,7 @@ export type {
 	TemplatedEmailMessage,
 } from './email.js'
 // Provider types (Strategy pattern)
-export type {
-	EmailProvider,
-	ProviderConfig,
-	ProviderFactory,
-} from './provider.js'
+export type { EmailProvider, ProviderConfig } from './provider.js'
 // Queue types
 export type {
 	BatchCompleteSummary,
@@ -44,12 +40,7 @@ export type {
 	SendSuccess,
 } from './result.js'
 // Template types
-export type {
-	RenderedTemplate,
-	TemplateEntry,
-	TemplateMap,
-	TemplateRenderOptions,
-} from './template.js'
+export type { RenderedTemplate, TemplateRenderOptions } from './template.js'
 // Webhook types
 export type {
 	BounceInfo,

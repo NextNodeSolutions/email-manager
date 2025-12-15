@@ -5,6 +5,7 @@
 
 import { randomUUID } from 'node:crypto'
 
+import { QUEUE_DEFAULT_OPTIONS } from '../lib/constants.js'
 import { createTokenBucket, getGlobalRateLimiter } from '../lib/rate-limiter.js'
 import type {
 	EmailMessage,
@@ -17,23 +18,7 @@ import type {
 	QueueOptions,
 	QueueStats,
 } from '../types/index.js'
-
-/**
- * Default queue options (core processing options only)
- */
-const DEFAULT_OPTIONS = {
-	maxRetries: 3,
-	retryDelay: 1000,
-	maxRetryDelay: 60000,
-	rateLimit: 2, // 2 emails per second (Resend default)
-	batchSize: 10,
-} as const
-
-/**
- * Simple delay utility
- */
-const delay = (ms: number): Promise<void> =>
-	new Promise(resolve => setTimeout(resolve, ms))
+import { calculateBackoff, delay } from '../utils/index.js'
 
 /**
  * Create an in-memory email queue
@@ -57,7 +42,7 @@ export const createMemoryQueue = (
 	provider: EmailProvider,
 	options: QueueOptions = {},
 ): EmailQueue => {
-	const config = { ...DEFAULT_OPTIONS, ...options }
+	const config = { ...QUEUE_DEFAULT_OPTIONS, ...options }
 	const jobs = new Map<string, QueueJob>()
 	const pending: string[] = []
 	const eventHandlers = new Map<QueueEventType, Set<QueueEventHandler>>()
@@ -84,16 +69,6 @@ export const createMemoryQueue = (
 				// Silently ignore handler errors
 			}
 		})
-	}
-
-	/**
-	 * Calculate exponential backoff delay with jitter
-	 */
-	const calculateBackoff = (attempt: number): number => {
-		const baseDelay = config.retryDelay * 2 ** (attempt - 1)
-		// Add jitter (0-25% of delay)
-		const jitter = baseDelay * Math.random() * 0.25
-		return Math.min(baseDelay + jitter, config.maxRetryDelay)
 	}
 
 	/**
@@ -232,7 +207,11 @@ export const createMemoryQueue = (
 			if (job.attempts < job.maxRetries) {
 				job.status = 'retrying'
 				job.error = errorMessage
-				const backoffDelay = calculateBackoff(job.attempts)
+				const backoffDelay = calculateBackoff(
+					job.attempts,
+					config.retryDelay,
+					config.maxRetryDelay,
+				)
 
 				emit('job:retry', { job, nextRetryIn: backoffDelay })
 

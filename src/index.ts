@@ -10,7 +10,6 @@
  */
 
 export type {
-	BatchSendOptions,
 	EmailManager,
 	EmailManagerConfig,
 	SendOptions,
@@ -20,9 +19,9 @@ export { createEmailManager } from './email-manager.js'
 // Constants exports
 export { BATCH_QUEUE_DEFAULTS } from './lib/constants.js'
 export type {
-	GlobalRateLimiter,
 	RateLimiterConfig,
 	RateLimiterStatus,
+	TokenBucket,
 } from './lib/rate-limiter.js'
 // Rate limiter exports
 export {
