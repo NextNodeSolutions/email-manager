@@ -18,4 +18,10 @@ export const QUEUE_DEFAULTS = {
 	rateLimit: 2,
 	/** Default timeout for batch completion (5 minutes) */
 	timeout: 300_000,
+	/** Default retention period in hours (7 days) */
+	retentionHours: 168,
+	/** Cleanup interval in milliseconds (1 hour) */
+	cleanupIntervalMs: 60 * 60 * 1000,
+	/** Graceful shutdown timeout in milliseconds (30 seconds) */
+	gracefulShutdownTimeoutMs: 30_000,
 } as const
