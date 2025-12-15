@@ -6,7 +6,7 @@
 import { randomUUID } from 'node:crypto'
 
 import { QUEUE_DEFAULT_OPTIONS } from '../lib/constants.js'
-import { createTokenBucket, getGlobalRateLimiter } from '../lib/rate-limiter.js'
+import { createTokenBucket } from '../lib/rate-limiter.js'
 import type {
 	EmailMessage,
 	EmailProvider,
@@ -19,6 +19,10 @@ import type {
 	QueueStats,
 } from '../types/index.js'
 import { calculateBackoff, delay } from '../utils/index.js'
+import {
+	createQueueEventEmitter,
+	createRateLimitCoordinator,
+} from './queue-utils.js'
 
 /**
  * Create an in-memory email queue
@@ -45,7 +49,6 @@ export const createMemoryQueue = (
 	const config = { ...QUEUE_DEFAULT_OPTIONS, ...options }
 	const jobs = new Map<string, QueueJob>()
 	const pending: string[] = []
-	const eventHandlers = new Map<QueueEventType, Set<QueueEventHandler>>()
 
 	let isRunning = false
 	let isPaused = false
@@ -57,34 +60,9 @@ export const createMemoryQueue = (
 		burstCapacity: 1,
 	})
 
-	/**
-	 * Emit event to all registered handlers
-	 */
-	const emit = <T>(event: QueueEventType, data: T): void => {
-		const handlers = eventHandlers.get(event)
-		handlers?.forEach(handler => {
-			try {
-				handler(data)
-			} catch {
-				// Silently ignore handler errors
-			}
-		})
-	}
-
-	/**
-	 * Wait for rate limit
-	 * Applies global rate limiter first (if configured), then local token bucket rate limiting
-	 */
-	const waitForRateLimit = async (): Promise<void> => {
-		// Global rate limiter takes priority (shared across all instances)
-		const globalLimiter = getGlobalRateLimiter()
-		if (globalLimiter) {
-			await globalLimiter.acquire()
-		}
-
-		// Local rate limit: token bucket with strict sequential (no burst)
-		await localRateLimiter.acquire()
-	}
+	// Shared event emitter and rate limit coordinator
+	const eventEmitter = createQueueEventEmitter()
+	const waitForRateLimit = createRateLimitCoordinator(localRateLimiter)
 
 	/**
 	 * Get synchronous stats
@@ -156,7 +134,7 @@ export const createMemoryQueue = (
 		if (!canProcess()) return
 
 		if (pending.length === 0) {
-			emit('queue:drained', { stats: getStatsSync() })
+			eventEmitter.emit('queue:drained', { stats: getStatsSync() })
 			return
 		}
 
@@ -187,7 +165,7 @@ export const createMemoryQueue = (
 		job.attempts += 1
 		job.lastAttemptAt = new Date()
 
-		emit('job:processing', { job })
+		eventEmitter.emit('job:processing', { job })
 
 		try {
 			await waitForRateLimit()
@@ -196,7 +174,7 @@ export const createMemoryQueue = (
 			if (result.success) {
 				job.status = 'completed'
 				job.result = result
-				emit('job:completed', { job, result })
+				eventEmitter.emit('job:completed', { job, result })
 			} else {
 				throw new Error(result.error.message)
 			}
@@ -213,7 +191,10 @@ export const createMemoryQueue = (
 					config.maxRetryDelay,
 				)
 
-				emit('job:retry', { job, nextRetryIn: backoffDelay })
+				eventEmitter.emit('job:retry', {
+					job,
+					nextRetryIn: backoffDelay,
+				})
 
 				// Schedule retry
 				setTimeout(() => {
@@ -225,7 +206,7 @@ export const createMemoryQueue = (
 			} else {
 				job.status = 'failed'
 				job.error = errorMessage
-				emit('job:failed', { job, error: errorMessage })
+				eventEmitter.emit('job:failed', { job, error: errorMessage })
 			}
 		} finally {
 			isProcessing = false
@@ -250,7 +231,7 @@ export const createMemoryQueue = (
 
 			jobs.set(job.id, job)
 			pending.push(job.id)
-			emit('job:added', { job })
+			eventEmitter.emit('job:added', { job })
 
 			if (isRunning && !isPaused) {
 				processNext()
@@ -345,14 +326,11 @@ export const createMemoryQueue = (
 		},
 
 		on<T>(event: QueueEventType, handler: QueueEventHandler<T>): void {
-			if (!eventHandlers.has(event)) {
-				eventHandlers.set(event, new Set())
-			}
-			eventHandlers.get(event)?.add(handler as QueueEventHandler)
+			eventEmitter.on(event, handler)
 		},
 
 		off(event: QueueEventType, handler: QueueEventHandler): void {
-			eventHandlers.get(event)?.delete(handler)
+			eventEmitter.off(event, handler)
 		},
 
 		async destroy(): Promise<void> {
@@ -367,7 +345,7 @@ export const createMemoryQueue = (
 			// Clear all data
 			jobs.clear()
 			pending.length = 0
-			eventHandlers.clear()
+			eventEmitter.clear()
 
 			// Cleanup rate limiter
 			localRateLimiter.destroy()

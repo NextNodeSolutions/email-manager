@@ -198,7 +198,7 @@ export const createWebhookHandler = (
 		} catch (error) {
 			const message =
 				error instanceof Error ? error.message : 'Handler error'
-			return { success: false, error: { code: 'PARSE_ERROR', message } }
+			return { success: false, error: { code: 'HANDLER_ERROR', message } }
 		}
 	}
 

@@ -162,5 +162,6 @@ export interface WebhookError {
 		| 'INVALID_PAYLOAD'
 		| 'EXPIRED_TIMESTAMP'
 		| 'PARSE_ERROR'
+		| 'HANDLER_ERROR'
 	message: string
 }

@@ -1,381 +1,246 @@
-# CLAUDE.md - Library Template
+# CLAUDE.md - @nextnode/email-manager
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
 ## Project Overview
 
-This is a **library template** for NextNode TypeScript packages. It follows the established patterns from `@nextnode/config-manager` and `@nextnode/logger` with modern CI/CD workflows and comprehensive tooling.
+**@nextnode/email-manager** is a TypeScript email management library for NextNode projects. It provides a unified API for sending emails with provider abstraction, queuing, rate limiting, and webhook handling.
 
-**Template Features:**
+**Key Features:**
 
-- **TypeScript strict mode** with maximum type safety
-- **ESM-only package** with proper exports configuration
-- **Modern CI/CD** with automated version management and publishing
-- **Comprehensive tooling** (ESLint, Biome, Vitest, Husky)
-- **Automated release management** with changesets and NPM provenance
+- **Provider-agnostic**: Currently supports Resend, architecture ready for extension
+- **React Email templates**: Type-safe JSX email templates with automatic HTML/text rendering
+- **Built-in queue**: In-memory or SQLite-backed queue with retry logic and rate limiting
+- **Global rate limiting**: Token bucket algorithm for coordinating limits across all sends
+- **Webhook handling**: Framework-agnostic webhook processing with signature verification
+- **Type-safe**: Full TypeScript support with discriminated unions for error handling
 
-## Template Structure
+## Project Structure
 
 ```
-library/
-├── .changeset/              # Version management configuration
-├── .github/workflows/       # CI/CD workflows (test, version, publish)
-├── .husky/                  # Git hooks configuration
-├── src/                     # Source code
-│   ├── lib/                # Core library modules
-│   ├── types/              # Type definitions
-│   ├── utils/              # Utility functions (includes logger)
-│   ├── __tests__/          # Test files with examples
-│   └── index.ts            # Main export file
-├── package.json            # Package configuration
-├── tsconfig.json           # TypeScript config (development)
-├── tsconfig.build.json     # TypeScript config (build)
-├── vitest.config.ts        # Test configuration
-├── eslint.config.mjs       # ESLint configuration
-├── biome.json              # Formatting configuration
-└── template_config.json    # Template generation config
+email-manager/
+├── src/
+│   ├── email-manager.ts     # Main facade - createEmailManager()
+│   ├── index.ts             # Public exports
+│   ├── lib/                 # Core utilities
+│   │   ├── constants.ts     # Default configuration values
+│   │   └── rate-limiter.ts  # Token bucket rate limiter
+│   ├── providers/           # Email provider implementations
+│   │   ├── base.ts          # Base provider interface
+│   │   ├── registry.ts      # Provider factory
+│   │   └── resend.ts        # Resend implementation
+│   ├── queue/               # Queue implementations
+│   │   ├── memory-queue.ts  # In-memory queue
+│   │   ├── sqlite-queue.ts  # SQLite persistent queue
+│   │   ├── ephemeral-batch-queue.ts  # Batch processing queue
+│   │   └── batch-monitor.ts # Batch progress monitoring
+│   ├── templates/           # React Email rendering
+│   │   └── renderer.ts      # Template renderer
+│   ├── types/               # TypeScript type definitions
+│   │   ├── email.ts         # Email message types
+│   │   ├── queue.ts         # Queue job types
+│   │   ├── result.ts        # Result/error types
+│   │   └── webhook.ts       # Webhook event types
+│   ├── utils/               # Shared utilities
+│   │   └── logger.ts        # Scoped loggers
+│   ├── webhooks/            # Webhook processing
+│   │   ├── handler.ts       # Webhook handler
+│   │   └── parser.ts        # Event parser
+│   └── __tests__/           # Test files
+├── package.json
+├── tsconfig.json            # Development config
+├── tsconfig.build.json      # Build config
+└── vitest.config.ts         # Test configuration
 ```
 
 ## Development Commands
 
-### Build & Development
-
 ```bash
 pnpm build              # Build library (clean + tsc + tsc-alias)
 pnpm clean              # Remove dist directory
-pnpm type-check         # TypeScript validation
-```
+pnpm type-check         # TypeScript validation without emit
 
-### Testing
-
-```bash
 pnpm test               # Run tests once
 pnpm test:watch         # Watch mode for tests
 pnpm test:coverage      # Generate coverage report
 pnpm test:ui            # Open Vitest UI
-```
 
-### Code Quality
+pnpm lint               # Biome check with auto-fix
+pnpm format             # Prettier formatting
 
-```bash
-pnpm lint               # ESLint with @nextnode/eslint-plugin (auto-fix)
-pnpm format             # Format with Biome
-```
-
-### Version Management & Publishing
-
-```bash
 pnpm changeset          # Create changeset for version bump
-pnpm changeset:version  # Update versions from changesets
-pnpm changeset:publish  # Publish to NPM registry
 ```
 
-## CI/CD Workflows
+## Architecture
 
-The template includes modern GitHub Actions workflows following NextNode standards:
+### Main Entry Point
 
-### Test Workflow (`test.yml`)
+`createEmailManager()` is the primary API. It creates an instance that manages:
 
-- **Trigger**: Pull requests to main/master
-- **Node.js**: Version 24 (latest)
-- **Quality checks**: Lint, typecheck, tests, build
-- **Coverage**: Enabled by default
+- Provider communication (Resend)
+- Queue operations (memory or SQLite)
+- Template rendering (React Email)
+- Rate limiting coordination
 
-### Version Management (`version.yml`)
+### Rate Limiting
 
-- **Trigger**: Pushes to main branch, manual dispatch
-- **Function**: Creates version bump PRs using changesets
-- **Auto-merge**: Enabled for automated workflow
+Two levels of rate limiting:
 
-### Auto Publish (`auto-publish.yml`)
+1. **Global Rate Limiter** (`lib/rate-limiter.ts`): Module-level singleton using token bucket algorithm. Configured once at app startup via `configureGlobalRateLimit()`. All direct sends respect this limit.
 
-- **Trigger**: Repository dispatch when version PR is merged
-- **Function**: Automatically publishes to NPM with provenance
-- **GitHub Releases**: Creates releases automatically
+2. **Queue Rate Limiter**: Each queue instance has its own rate limiter for sequential processing of queued jobs.
 
-### Manual Publish (`manual-publish.yml`)
+### Queue Processing
 
-- **Trigger**: Manual workflow dispatch
-- **Function**: Emergency publishing without version PR
+Queues process jobs **sequentially** (not concurrently) to ensure rate limits are respected:
 
-### Changeset Check (`changeset-check.yml`)
+- Token bucket controls timing between sends
+- Default rate: 2 emails/second (Resend free tier safe)
+- Exponential backoff on failures
+- Automatic retry with configurable limits
 
-- **Trigger**: Pull request creation/updates
-- **Function**: Ensures changesets are added for source code changes
-- **Smart detection**: Only requires changesets for actual code changes
+### Storage Backends
 
-## TypeScript Configuration
+- **Memory** (default): Fast, non-persistent, for transient queues
+- **SQLite**: Persistent storage with automatic cleanup, uses `env-paths` for platform-specific data directories
 
-### Strict Mode Settings
+### Batch Processing
 
-- **Maximum type safety**: `strict`, `noUncheckedIndexedAccess`, `exactOptionalPropertyTypes`
-- **ESNext modules**: Modern module resolution with bundler mode
-- **Path mapping**: `@/*` aliases for clean imports
-- **Build separation**: Development config with `noEmit`, separate build config
+`sendBatch()` creates an ephemeral SQLite queue for the batch:
 
-### Module System
+1. Creates temporary database
+2. Adds all messages
+3. Processes with rate limiting and retries
+4. Returns summary on completion
+5. Auto-destroys database
 
-- **ESM-only**: No CommonJS support, pure ES modules
-- **Exports**: Properly configured with types and import paths
-- **Extension mapping**: `.js` extensions in imports for Node.js compatibility
+## Key Types
 
-## Template Variables
+### Result Pattern
 
-The `template_config.json` defines replaceable variables:
-
-### Package.json Variables
-
-- `{{project_name}}`: Package name (e.g., `@nextnode/my-library`)
-- `{{project_description}}`: Package description
-- `{{project_author}}`: Author information
-- `{{project_keywords}}`: Keywords array
-- `{{project_license}}`: License type
-- `{{project_version}}`: Initial version
-
-### Repository Variables
-
-- Used in changeset configuration and README updates
-- Automatically replaced during template generation
-
-## Code Quality Standards
-
-### ESLint Configuration
-
-- Uses `@nextnode/eslint-plugin` for consistent NextNode standards
-- **Zero warnings policy**: `--max-warnings 0`
-- **Auto-fix enabled**: Automatically fixes issues during lint
-
-### Formatting
-
-- **Biome**: Fast alternative to Prettier
-- **No errors on unmatched**: Handles various file types gracefully
-- **Pre-commit hooks**: Automatic formatting before commits
-
-### Testing
-
-- **Vitest**: Modern test runner with built-in TypeScript support
-- **Coverage reporting**: V8 provider for accurate coverage
-- **UI testing**: Interactive test interface available
-
-## Dependency Management
-
-### Development Dependencies
-
-- **@nextnode/eslint-plugin**: Shared linting rules
-- **@biomejs/biome**: Modern formatting and linting
-- **@vitest/coverage-v8**: Test coverage reporting
-- **@changesets/cli**: Version management system
-- **typescript**, **tsc-alias**: TypeScript compilation with path mapping
-- **husky**, **lint-staged**: Git hooks and pre-commit checks
-
-### Production Dependencies
-
-- **@nextnode/logger**: Lightweight logging library with scope-based organization
-- Add other production dependencies based on library functionality
-- Consider peer dependencies for framework integrations
-
-## Logging System
-
-The template includes a comprehensive logging system using `@nextnode/logger` with NextNode-specific conventions.
-
-### Logger Structure
+All operations return discriminated unions:
 
 ```typescript
-// Main loggers available
-import {
-	logger, // Main library logger
-	apiLogger, // API-specific operations
-	coreLogger, // Core functionality
-	utilsLogger, // Utility functions
-	logDebug, // Debug helper
-	logApiResponse, // API response helper
-	logError, // Error helper with context
-} from './utils/logger.js'
+type Result<T> =
+	| { success: true; data: T }
+	| { success: false; error: EmailError }
 ```
 
-### Usage Examples
-
-#### Basic Logging
+### Email Error Codes
 
 ```typescript
-import { coreLogger } from '../utils/logger.js'
-
-export const createClient = (options: ClientConfig) => {
-	coreLogger.info('Creating client instance', {
-		hasApiKey: Boolean(options.apiKey),
-	})
-
-	// ... implementation
-
-	coreLogger.info('Client created successfully')
-}
+type EmailErrorCode =
+	| 'VALIDATION_ERROR'
+	| 'AUTHENTICATION_ERROR'
+	| 'RATE_LIMIT_ERROR'
+	| 'PROVIDER_ERROR'
+	| 'NETWORK_ERROR'
+	| 'TEMPLATE_ERROR'
+	| 'UNKNOWN_ERROR'
 ```
 
-#### Error Logging with Context
+### Queue Job Status
 
 ```typescript
-import { logError } from '../utils/logger.js'
-
-try {
-	// ... some operation
-} catch (error) {
-	logError(error, {
-		operation: 'data-processing',
-		userId: user.id,
-		timestamp: Date.now(),
-	})
-	throw error
-}
+type QueueJobStatus =
+	| 'pending'
+	| 'processing'
+	| 'completed'
+	| 'failed'
+	| 'retrying'
 ```
 
-#### API Logging
+## Testing
+
+Tests use Vitest with comprehensive mocking:
+
+- Provider tests mock the Resend client
+- Queue tests use in-memory backends
+- Rate limiter tests use controlled timing
+- Logger is mocked to avoid noise
+
+Mock patterns:
 
 ```typescript
-import { logApiResponse } from '../utils/logger.js'
-
-// Log API responses with status and optional data
-logApiResponse('POST', '/api/users', 201, { userId: 123 })
-logApiResponse('GET', '/api/health', 200)
-```
-
-#### Debug Logging
-
-```typescript
-import { logDebug } from '../utils/logger.js'
-
-// Log complex objects for debugging
-logDebug('Configuration loaded', {
-	config,
-	environment: process.env.NODE_ENV,
-})
-```
-
-### Logger Features
-
-- **Environment-aware**: Automatically formats for development (console) and production (JSON)
-- **Scoped prefixes**: Each logger has a specific prefix for easy filtering
-- **Location tracking**: Automatically captures call location in development
-- **Zero dependencies**: Lightweight with no external dependencies
-- **Type-safe**: Full TypeScript support with proper types
-- **Request tracking**: Automatic request ID generation for distributed tracing
-
-### Logging Best Practices
-
-1. **Use appropriate log levels**:
-    - `info`: Normal operation events
-    - `warn`: Warning conditions that should be noted
-    - `error`: Error conditions that require attention
-
-2. **Include relevant context**:
-    - Always provide meaningful context objects
-    - Include user IDs, request IDs, or operation identifiers
-    - Add timing information for performance monitoring
-
-3. **Use specialized loggers**:
-    - `coreLogger` for main library functionality
-    - `apiLogger` for HTTP/API operations
-    - `utilsLogger` for utility functions
-
-4. **Error handling**:
-    - Always use `logError` for caught exceptions
-    - Include original error and relevant context
-    - Don't log the same error multiple times in the call stack
-
-### Testing Logging
-
-The template includes comprehensive logger tests with mocking:
-
-```typescript
-// Mock the logger in tests
 vi.mock('../utils/logger.js', () => ({
-	coreLogger: { info: vi.fn() },
-	logError: vi.fn(),
+	queueLogger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() },
+	logger: { info: vi.fn() },
 }))
-
-// Test that logging occurs
-expect(coreLogger.info).toHaveBeenCalledWith('Expected message', { data })
 ```
 
-## Release Management
+## Logging
 
-### Automated Workflow
+Uses `@nextnode/logger` with scoped prefixes:
 
-1. **Development**: Create feature branches, implement changes
-2. **Changeset**: Run `pnpm changeset` to describe changes
-3. **Pull Request**: Create PR, automated checks run
-4. **Merge**: Version management creates version PR automatically
-5. **Auto-publish**: Version PR merge triggers NPM publishing
+- `logger` - Main library logger
+- `providerLogger` - Provider operations
+- `queueLogger` - Queue processing
+- `templateLogger` - Template rendering
+- `webhookLogger` - Webhook handling
 
-### Manual Workflow
+## Default Configuration
 
-- Use manual-publish workflow for emergency releases
-- Changeset check ensures proper version tracking
-- GitHub releases created automatically with changelog
+```typescript
+// Queue defaults (from lib/constants.ts)
+{
+  maxRetries: 3,
+  retryDelay: 1000,      // 1 second
+  maxRetryDelay: 60_000, // 1 minute
+  rateLimit: 2,          // 2 emails/second (Resend safe)
+  batchSize: 10,
+}
 
-## Template Usage
-
-### From Template Generator
-
-```bash
-# Using NextNode project generator
-project-generator new library my-awesome-library
+// Batch defaults
+{
+  timeout: 300_000,      // 5 minutes
+}
 ```
 
-### Manual Setup
+## Adding New Providers
 
-1. Copy template files to new directory
-2. Replace template variables in package.json, README.md
-3. Update changeset configuration with correct repository
-4. Initialize git repository and push to GitHub
-5. Configure NPM_TOKEN secret for publishing
+1. Create provider in `src/providers/` implementing `EmailProvider` interface
+2. Add to `ProviderConfigMap` and `ProviderClientMap` in `registry.ts`
+3. Update `createProvider()` factory
+4. Add tests
 
-## Best Practices
+## Dependencies
 
-### Code Organization
+**Production:**
 
-- **lib/**: Core library functionality, organized by feature
-- **types/**: TypeScript type definitions and interfaces
-- **utils/**: Shared utility functions and helpers
-- **index.ts**: Single entry point with clean exports
+- `@nextnode/logger` - Logging
+- `@react-email/render` - Template rendering
+- `env-paths` - Platform-specific data directories
+- `resend` - Resend API client
 
-### Documentation
+**Peer (optional):**
 
-- **README.md**: User-facing documentation with examples
-- **CHANGELOG.md**: Generated automatically by changesets
-- **API documentation**: Consider TypeDoc for complex libraries
-
-### Testing Strategy
-
-- **Unit tests**: Test individual functions and classes
-- **Integration tests**: Test module interactions
-- **Type tests**: Ensure TypeScript types work correctly
-- **Coverage**: Aim for >80% coverage on new code
-
-### Version Management
-
-- **Semantic versioning**: Following semver standards
-- **Conventional commits**: Use conventional commit messages
-- **Changesets**: Always create changesets for changes affecting users
-- **Breaking changes**: Clearly document in changeset descriptions
+- `react` - Required for React Email templates
 
 ## Environment Requirements
 
-- **Node.js**: >=24.0.0 (latest LTS)
-- **pnpm**: 10.11.0+ (specified in packageManager)
-- **TypeScript**: 5.0+ for modern language features
-- **Git**: For version control and hooks
+- Node.js >=24.0.0
+- pnpm 10.11.0+
+- TypeScript 5.0+
 
-## Migration Notes
+## Common Tasks
 
-This template incorporates lessons learned from:
+### Adding a queue callback
 
-- **@nextnode/config-manager**: Advanced TypeScript patterns, automated type generation
-- **@nextnode/logger**: Clean architecture, zero-dependency design
-- **Modern CI/CD**: Automated version management and publishing workflows
+```typescript
+const emailManager = createEmailManager({
+	provider: 'resend',
+	providerConfig: { apiKey: '...' },
+	queue: {
+		onProgress: stats => console.log(stats),
+		onComplete: summary => console.log(summary),
+	},
+})
+```
 
-### From Older Templates
+### Testing rate limiting
 
-- Updated to Node 24 from Node 20
-- New release workflow system replacing single release.yml
-- Enhanced TypeScript strict mode settings
-- Updated dependency versions and tooling
+Use `resetGlobalRateLimiter()` between tests to ensure clean state.
+
+### Debugging queue issues
+
+Enable debug logging via `LOG_LEVEL=debug` environment variable.

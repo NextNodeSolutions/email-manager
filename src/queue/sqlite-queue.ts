@@ -12,7 +12,7 @@ import { DatabaseSync } from 'node:sqlite'
 import envPaths from 'env-paths'
 
 import { QUEUE_DEFAULT_OPTIONS } from '../lib/constants.js'
-import { createTokenBucket, getGlobalRateLimiter } from '../lib/rate-limiter.js'
+import { createTokenBucket } from '../lib/rate-limiter.js'
 import type {
 	EmailMessage,
 	EmailProvider,
@@ -30,6 +30,10 @@ import { calculateBackoff, delay } from '../utils/index.js'
 import { queueLogger } from '../utils/logger.js'
 import type { BatchMonitor } from './batch-monitor.js'
 import { createBatchMonitor } from './batch-monitor.js'
+import {
+	createQueueEventEmitter,
+	createRateLimitCoordinator,
+} from './queue-utils.js'
 
 /**
  * SQLite backend configuration
@@ -150,7 +154,6 @@ export const createSQLiteQueue = (
 		backendConfig.appName,
 		backendConfig.databaseKey,
 	)
-	const eventHandlers = new Map<QueueEventType, Set<QueueEventHandler>>()
 
 	let db: DatabaseSync
 	let isRunning = false
@@ -163,6 +166,10 @@ export const createSQLiteQueue = (
 		limit: config.rateLimit,
 		burstCapacity: 1,
 	})
+
+	// Shared event emitter and rate limit coordinator
+	const eventEmitter = createQueueEventEmitter()
+	const waitForRateLimit = createRateLimitCoordinator(localRateLimiter)
 
 	// Queue instance reference for global shutdown handler
 	let queueInstance: ShutdownableQueue | null = null
@@ -334,35 +341,6 @@ export const createSQLiteQueue = (
 	}
 
 	/**
-	 * Emit event to all registered handlers
-	 */
-	const emit = <T>(event: QueueEventType, data: T): void => {
-		const handlers = eventHandlers.get(event)
-		handlers?.forEach(handler => {
-			try {
-				handler(data)
-			} catch {
-				// Silently ignore handler errors
-			}
-		})
-	}
-
-	/**
-	 * Wait for rate limit
-	 * Applies global rate limiter first (if configured), then local token bucket rate limiting
-	 */
-	const waitForRateLimit = async (): Promise<void> => {
-		// Global rate limiter takes priority (shared across all instances)
-		const globalLimiter = getGlobalRateLimiter()
-		if (globalLimiter) {
-			await globalLimiter.acquire()
-		}
-
-		// Local rate limit: token bucket with strict sequential (no burst)
-		await localRateLimiter.acquire()
-	}
-
-	/**
 	 * Type guard to check if value is a QueueRow
 	 */
 	const isQueueRow = (value: unknown): value is QueueRow => {
@@ -514,7 +492,7 @@ export const createSQLiteQueue = (
 
 		const row = getNextPendingJob()
 		if (!row) {
-			emit('queue:drained', { stats: getStatsSync() })
+			eventEmitter.emit('queue:drained', { stats: getStatsSync() })
 			return
 		}
 
@@ -535,7 +513,7 @@ export const createSQLiteQueue = (
 		})
 
 		const updatedJob = { ...job, status: 'completed' as const, result }
-		emit('job:completed', { job: updatedJob, result })
+		eventEmitter.emit('job:completed', { job: updatedJob, result })
 
 		if (job.batchId && batchMonitor) {
 			batchMonitor.recordSuccess(job.batchId)
@@ -558,7 +536,7 @@ export const createSQLiteQueue = (
 		)
 
 		updateJobStatus(jobId, 'retrying', { error: errorMessage })
-		emit('job:retry', { job, nextRetryIn: backoffDelay })
+		eventEmitter.emit('job:retry', { job, nextRetryIn: backoffDelay })
 
 		setTimeout(() => {
 			if (isRunning && !isPaused) {
@@ -577,7 +555,7 @@ export const createSQLiteQueue = (
 		errorMessage: string,
 	): void => {
 		updateJobStatus(jobId, 'failed', { error: errorMessage })
-		emit('job:failed', { job, error: errorMessage })
+		eventEmitter.emit('job:failed', { job, error: errorMessage })
 
 		if (job.batchId && batchMonitor) {
 			batchMonitor.recordFailure(job.batchId)
@@ -595,7 +573,7 @@ export const createSQLiteQueue = (
 			lastAttemptAt: Date.now(),
 		})
 
-		emit('job:processing', { job })
+		eventEmitter.emit('job:processing', { job })
 
 		try {
 			await waitForRateLimit()
@@ -667,7 +645,7 @@ export const createSQLiteQueue = (
 				scheduledFor: addOptions.scheduledFor,
 			}
 
-			emit('job:added', { job })
+			eventEmitter.emit('job:added', { job })
 
 			if (isRunning && !isPaused) {
 				processNext()
@@ -725,7 +703,7 @@ export const createSQLiteQueue = (
 
 			// Emit events for each job
 			for (const job of jobs) {
-				emit('job:added', { job })
+				eventEmitter.emit('job:added', { job })
 			}
 
 			if (isRunning && !isPaused) {
@@ -811,14 +789,11 @@ export const createSQLiteQueue = (
 		},
 
 		on<T>(event: QueueEventType, handler: QueueEventHandler<T>): void {
-			if (!eventHandlers.has(event)) {
-				eventHandlers.set(event, new Set())
-			}
-			eventHandlers.get(event)?.add(handler as QueueEventHandler)
+			eventEmitter.on(event, handler)
 		},
 
 		off(event: QueueEventType, handler: QueueEventHandler): void {
-			eventHandlers.get(event)?.delete(handler)
+			eventEmitter.off(event, handler)
 		},
 
 		async destroy(): Promise<void> {

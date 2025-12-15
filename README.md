@@ -176,17 +176,38 @@ export async function POST(request: Request) {
 
 ## Configuration
 
+### Global Rate Limiting
+
+Configure a global rate limiter to coordinate rate limits across all email operations (direct sends, queues, batch operations).
+
+```typescript
+import { configureGlobalRateLimit } from '@nextnode/email-manager'
+
+// At application startup
+configureGlobalRateLimit({ limit: 10 }) // 10 emails/second max
+
+// With burst capacity (allows short bursts above limit)
+configureGlobalRateLimit({ limit: 10, burstCapacity: 15 })
+```
+
+The global rate limiter uses a token bucket algorithm:
+
+- All `send()`, `sendTemplate()`, and queue operations respect this limit
+- Burst capacity allows temporary spikes (defaults to limit value)
+- Automatically blocks until rate allows when limit is reached
+
 ### Queue Options
 
 ```typescript
 interface QueueOptions {
-	concurrency?: number // Max concurrent sends (default: 5)
 	maxRetries?: number // Max retry attempts (default: 3)
 	retryDelay?: number // Initial retry delay in ms (default: 1000)
-	maxRetryDelay?: number // Max retry delay in ms (default: 30000)
-	rateLimit?: number // Emails per second (default: 10)
+	maxRetryDelay?: number // Max retry delay in ms (default: 60000)
+	rateLimit?: number // Emails per second (default: 2)
 	batchSize?: number // Batch processing size (default: 10)
 	backendConfig?: QueueBackendConfig // Storage backend (default: memory)
+	onProgress?: (stats: BatchProgressStats) => void // Progress callback
+	onComplete?: (summary: BatchCompleteSummary) => void // Completion callback
 }
 ```
 

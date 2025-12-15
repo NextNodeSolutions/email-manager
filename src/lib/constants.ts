@@ -20,8 +20,6 @@ export const QUEUE_DEFAULT_OPTIONS = {
 	batchSize: 10,
 } as const
 
-export type QueueDefaultOptions = typeof QUEUE_DEFAULT_OPTIONS
-
 /**
  * Default batch queue configuration
  * These values can be overridden by user options
@@ -38,5 +36,3 @@ export const BATCH_QUEUE_DEFAULTS = {
 	/** Default timeout for batch completion (5 minutes) */
 	timeout: 300_000,
 } as const
-
-export type BatchQueueDefaults = typeof BATCH_QUEUE_DEFAULTS
