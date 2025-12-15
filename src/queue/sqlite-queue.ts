@@ -60,7 +60,7 @@ interface QueueRow {
 /**
  * Default retention period (7 days in hours)
  */
-const DEFAULT_RETENTION_HOURS = 168
+const DEFAULT_RETENTION_HOURS = QUEUE_DEFAULTS.retentionHours
 
 /**
  * Default database key
@@ -81,7 +81,7 @@ const getDatabasePath = (
 /**
  * Cleanup interval (1 hour in milliseconds)
  */
-const CLEANUP_INTERVAL_MS = 60 * 60 * 1000
+const CLEANUP_INTERVAL_MS = QUEUE_DEFAULTS.cleanupIntervalMs
 
 /**
  * Module-level shutdown handler singleton
@@ -292,8 +292,8 @@ export const createSQLiteQueue = (
 
 		isRunning = false
 
-		// Wait for active job to complete (max 30 seconds)
-		const maxWait = 30000
+		// Wait for active job to complete
+		const maxWait = QUEUE_DEFAULTS.gracefulShutdownTimeoutMs
 		const startTime = Date.now()
 
 		while (isProcessing && Date.now() - startTime < maxWait) {

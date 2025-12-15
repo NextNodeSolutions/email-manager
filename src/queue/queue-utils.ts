@@ -6,6 +6,8 @@
 import type { TokenBucket } from '../lib/rate-limiter.js'
 import { getGlobalRateLimiter } from '../lib/rate-limiter.js'
 import type { QueueEventHandler, QueueEventType } from '../types/index.js'
+import { getErrorMessage } from '../utils/index.js'
+import { queueLogger } from '../utils/logger.js'
 
 /**
  * Event emitter instance type
@@ -31,8 +33,11 @@ export const createQueueEventEmitter = (): QueueEventEmitter => {
 		handlers?.forEach(handler => {
 			try {
 				handler(data)
-			} catch {
-				// Silently ignore handler errors
+			} catch (error) {
+				queueLogger.warn('Event handler error', {
+					event,
+					error: getErrorMessage(error),
+				})
 			}
 		})
 	}
