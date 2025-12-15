@@ -74,3 +74,46 @@ export interface BatchSendSuccess {
 }
 
 export type BatchSendResult = Result<BatchSendSuccess, EmailError>
+
+// ============================================
+// Result Factory Functions
+// ============================================
+
+/**
+ * Create a failure result with the given error
+ */
+export const fail = <E>(error: E): { success: false; error: E } => ({
+	success: false,
+	error,
+})
+
+/**
+ * Create an EmailError object
+ */
+export const emailError = (
+	code: EmailErrorCode,
+	message: string,
+	options?: {
+		cause?: Error
+		providerError?: Record<string, unknown>
+		emailId?: string
+	},
+): EmailError => ({
+	code,
+	message,
+	...options,
+})
+
+/**
+ * Create a failure result with an EmailError
+ */
+export const emailFail = (
+	code: EmailErrorCode,
+	message: string,
+	options?: {
+		cause?: Error
+		providerError?: Record<string, unknown>
+		emailId?: string
+	},
+): { success: false; error: EmailError } =>
+	fail(emailError(code, message, options))

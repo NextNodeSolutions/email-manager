@@ -10,6 +10,7 @@ import type {
 	ProviderConfig,
 	Result,
 } from '../types/index.js'
+import { emailFail } from '../types/index.js'
 
 /**
  * Base provider options
@@ -62,42 +63,20 @@ const normalizeRecipients = (
  * Returns Result pattern for consistent error handling
  */
 const validateMessage = (message: EmailMessage): Result<void, EmailError> => {
-	if (!message.from) {
-		return {
-			success: false,
-			error: {
-				code: 'VALIDATION_ERROR',
-				message: 'Missing required field: from',
-			},
-		}
+	const requiredChecks = [
+		{ check: !message.from, msg: 'Missing required field: from' },
+		{ check: !message.to, msg: 'Missing required field: to' },
+		{ check: !message.subject, msg: 'Missing required field: subject' },
+		{
+			check: !message.html && !message.text,
+			msg: 'Either html or text content is required',
+		},
+	]
+
+	for (const { check, msg } of requiredChecks) {
+		if (check) return emailFail('VALIDATION_ERROR', msg)
 	}
-	if (!message.to) {
-		return {
-			success: false,
-			error: {
-				code: 'VALIDATION_ERROR',
-				message: 'Missing required field: to',
-			},
-		}
-	}
-	if (!message.subject) {
-		return {
-			success: false,
-			error: {
-				code: 'VALIDATION_ERROR',
-				message: 'Missing required field: subject',
-			},
-		}
-	}
-	if (!message.html && !message.text) {
-		return {
-			success: false,
-			error: {
-				code: 'VALIDATION_ERROR',
-				message: 'Either html or text content is required',
-			},
-		}
-	}
+
 	return { success: true, data: undefined }
 }
 

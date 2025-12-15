@@ -12,6 +12,7 @@ import type {
 	WebhookEventType,
 	WebhookVerifyOptions,
 } from '../types/index.js'
+import { webhookFail } from '../types/index.js'
 
 /**
  * Valid webhook event types
@@ -54,24 +55,12 @@ export const verifyWebhookSignature = (
 		// Svix signature format: v1,<timestamp>,<signature>
 		const parts = signature.split(',')
 		if (parts.length < 3) {
-			return {
-				success: false,
-				error: {
-					code: 'INVALID_SIGNATURE',
-					message: 'Invalid signature format',
-				},
-			}
+			return webhookFail('INVALID_SIGNATURE', 'Invalid signature format')
 		}
 
 		const [version, timestamp, sig] = parts
 		if (version !== 'v1' || !timestamp || !sig) {
-			return {
-				success: false,
-				error: {
-					code: 'INVALID_SIGNATURE',
-					message: 'Invalid signature format',
-				},
-			}
+			return webhookFail('INVALID_SIGNATURE', 'Invalid signature format')
 		}
 
 		// Check timestamp tolerance
@@ -79,13 +68,10 @@ export const verifyWebhookSignature = (
 		const now = Math.floor(Date.now() / 1000)
 
 		if (Math.abs(now - timestampNum) > tolerance) {
-			return {
-				success: false,
-				error: {
-					code: 'EXPIRED_TIMESTAMP',
-					message: 'Webhook timestamp is too old',
-				},
-			}
+			return webhookFail(
+				'EXPIRED_TIMESTAMP',
+				'Webhook timestamp is too old',
+			)
 		}
 
 		// Compute expected signature
@@ -99,34 +85,16 @@ export const verifyWebhookSignature = (
 		const expectedBuffer = Buffer.from(expectedSig, 'hex')
 
 		if (sigBuffer.length !== expectedBuffer.length) {
-			return {
-				success: false,
-				error: {
-					code: 'INVALID_SIGNATURE',
-					message: 'Signature mismatch',
-				},
-			}
+			return webhookFail('INVALID_SIGNATURE', 'Signature mismatch')
 		}
 
 		if (!timingSafeEqual(sigBuffer, expectedBuffer)) {
-			return {
-				success: false,
-				error: {
-					code: 'INVALID_SIGNATURE',
-					message: 'Signature mismatch',
-				},
-			}
+			return webhookFail('INVALID_SIGNATURE', 'Signature mismatch')
 		}
 
 		return { success: true, data: true }
 	} catch {
-		return {
-			success: false,
-			error: {
-				code: 'INVALID_SIGNATURE',
-				message: 'Failed to verify signature',
-			},
-		}
+		return webhookFail('INVALID_SIGNATURE', 'Failed to verify signature')
 	}
 }
 
@@ -154,33 +122,21 @@ export const parseWebhookPayload = (
 
 		// Validate required fields
 		if (!payload.type || !payload.created_at || !payload.data) {
-			return {
-				success: false,
-				error: {
-					code: 'INVALID_PAYLOAD',
-					message: 'Missing required webhook fields',
-				},
-			}
+			return webhookFail(
+				'INVALID_PAYLOAD',
+				'Missing required webhook fields',
+			)
 		}
 
 		if (!VALID_EVENT_TYPES.includes(payload.type)) {
-			return {
-				success: false,
-				error: {
-					code: 'INVALID_PAYLOAD',
-					message: `Unknown event type: ${payload.type}`,
-				},
-			}
+			return webhookFail(
+				'INVALID_PAYLOAD',
+				`Unknown event type: ${payload.type}`,
+			)
 		}
 
 		return { success: true, data: payload }
 	} catch {
-		return {
-			success: false,
-			error: {
-				code: 'PARSE_ERROR',
-				message: 'Failed to parse webhook payload',
-			},
-		}
+		return webhookFail('PARSE_ERROR', 'Failed to parse webhook payload')
 	}
 }

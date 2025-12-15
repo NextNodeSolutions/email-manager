@@ -13,6 +13,7 @@ import type {
 	ProviderConfig,
 	SendResult,
 } from '../types/index.js'
+import { emailFail, fail } from '../types/index.js'
 import { createProviderUtils } from './base.js'
 
 /**
@@ -178,20 +179,14 @@ export const createResendProvider = (
 				)
 
 				if (error) {
-					return {
-						success: false,
-						error: mapResendError(new Error(error.message)),
-					}
+					return fail(mapResendError(new Error(error.message)))
 				}
 
 				if (!data) {
-					return {
-						success: false,
-						error: {
-							code: 'PROVIDER_ERROR',
-							message: 'No data returned from Resend',
-						},
-					}
+					return emailFail(
+						'PROVIDER_ERROR',
+						'No data returned from Resend',
+					)
 				}
 
 				return {
@@ -203,22 +198,16 @@ export const createResendProvider = (
 					},
 				}
 			} catch (error) {
-				return {
-					success: false,
-					error: mapResendError(error),
-				}
+				return fail(mapResendError(error))
 			}
 		},
 
 		async sendBatch(messages: EmailMessage[]): Promise<BatchSendResult> {
 			if (messages.length > utils.maxBatchSize) {
-				return {
-					success: false,
-					error: {
-						code: 'VALIDATION_ERROR',
-						message: `Batch size ${messages.length} exceeds maximum ${utils.maxBatchSize}`,
-					},
-				}
+				return emailFail(
+					'VALIDATION_ERROR',
+					`Batch size ${messages.length} exceeds maximum ${utils.maxBatchSize}`,
+				)
 			}
 
 			if (messages.length === 0) {
@@ -252,20 +241,14 @@ export const createResendProvider = (
 				)
 
 				if (error) {
-					return {
-						success: false,
-						error: mapResendError(new Error(error.message)),
-					}
+					return fail(mapResendError(new Error(error.message)))
 				}
 
 				if (!data) {
-					return {
-						success: false,
-						error: {
-							code: 'PROVIDER_ERROR',
-							message: 'No data returned from Resend batch',
-						},
-					}
+					return emailFail(
+						'PROVIDER_ERROR',
+						'No data returned from Resend batch',
+					)
 				}
 
 				const results = data.data.map((result, index) => {
@@ -299,10 +282,7 @@ export const createResendProvider = (
 					},
 				}
 			} catch (error) {
-				return {
-					success: false,
-					error: mapResendError(error),
-				}
+				return fail(mapResendError(error))
 			}
 		},
 

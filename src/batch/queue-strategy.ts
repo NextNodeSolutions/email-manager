@@ -10,6 +10,7 @@ import type {
 	EmailProvider,
 	QueueBatchOptions,
 } from '../types/index.js'
+import { emailFail } from '../types/index.js'
 import { getErrorMessage } from '../utils/index.js'
 
 /**
@@ -49,14 +50,11 @@ export const sendBatchWithQueue = async (
 			},
 		}
 	} catch (error) {
-		return {
-			success: false,
-			error: {
-				code: 'PROVIDER_ERROR',
-				message: getErrorMessage(error),
-				...(error instanceof Error && { cause: error }),
-			},
-		}
+		return emailFail(
+			'PROVIDER_ERROR',
+			getErrorMessage(error),
+			error instanceof Error ? { cause: error } : undefined,
+		)
 	} finally {
 		await batchQueue.destroy()
 	}

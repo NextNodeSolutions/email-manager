@@ -17,6 +17,7 @@ import type {
 	WebhookEventType,
 	WebhookHandler,
 } from '../types/index.js'
+import { webhookFail } from '../types/index.js'
 import { parseWebhookPayload, verifyWebhookSignature } from './parser.js'
 
 /**
@@ -83,13 +84,7 @@ const verifySignatureIfEnabled = (
 	if (!verifySignature) return null
 
 	if (!signature) {
-		return {
-			success: false,
-			error: {
-				code: 'INVALID_SIGNATURE',
-				message: 'Missing signature header',
-			},
-		}
+		return webhookFail('INVALID_SIGNATURE', 'Missing signature header')
 	}
 
 	const verifyResult = verifyWebhookSignature({
@@ -198,7 +193,7 @@ export const createWebhookHandler = (
 		} catch (error) {
 			const message =
 				error instanceof Error ? error.message : 'Handler error'
-			return { success: false, error: { code: 'HANDLER_ERROR', message } }
+			return webhookFail('HANDLER_ERROR', message)
 		}
 	}
 

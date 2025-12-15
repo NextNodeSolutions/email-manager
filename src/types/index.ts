@@ -47,6 +47,8 @@ export type {
 	SendResult,
 	SendSuccess,
 } from './result.js'
+// Result factory functions
+export { emailError, emailFail, fail } from './result.js'
 // Template types
 export type { RenderedTemplate, TemplateRenderOptions } from './template.js'
 // Webhook types
@@ -61,6 +63,7 @@ export type {
 	EmailSentEvent,
 	TrackingEventData,
 	WebhookError,
+	WebhookErrorCode,
 	WebhookEvent,
 	WebhookEventBase,
 	WebhookEventData,
@@ -68,3 +71,5 @@ export type {
 	WebhookHandler,
 	WebhookVerifyOptions,
 } from './webhook.js'
+// Webhook factory functions
+export { webhookError, webhookFail } from './webhook.js'

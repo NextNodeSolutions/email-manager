@@ -165,3 +165,32 @@ export interface WebhookError {
 		| 'HANDLER_ERROR'
 	message: string
 }
+
+// ============================================
+// WebhookError Factory Functions
+// ============================================
+
+/** Webhook error code type (extracted for convenience) */
+export type WebhookErrorCode = WebhookError['code']
+
+/**
+ * Create a WebhookError object
+ */
+export const webhookError = (
+	code: WebhookErrorCode,
+	message: string,
+): WebhookError => ({
+	code,
+	message,
+})
+
+/**
+ * Create a failure result with a WebhookError
+ */
+export const webhookFail = (
+	code: WebhookErrorCode,
+	message: string,
+): { success: false; error: WebhookError } => ({
+	success: false,
+	error: webhookError(code, message),
+})
