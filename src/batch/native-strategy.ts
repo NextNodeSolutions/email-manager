@@ -54,22 +54,10 @@ export const sendBatchNative = async (
 	for (const [chunkIndex, chunk] of chunks.entries()) {
 		await rateLimiter.acquire()
 		const result = await provider.sendBatch(chunk)
+		const offset = chunkIndex * RESEND_MAX_BATCH_SIZE
 
-		if (result.success) {
-			const offset = chunkIndex * RESEND_MAX_BATCH_SIZE
-			for (const r of result.data.results ?? []) {
-				// intentional fallback: results is optional in BatchSendSuccess
-				allResults.push({
-					index: offset + r.index,
-					recipient: r.recipient,
-					result: r.result as SendResult,
-				})
-			}
-			successful += result.data.successful
-			failed += result.data.failed
-		} else {
+		if (!result.success) {
 			// Entire chunk failed - add failed results for each message
-			const offset = chunkIndex * RESEND_MAX_BATCH_SIZE
 			for (let i = 0; i < chunk.length; i++) {
 				allResults.push({
 					index: offset + i,
@@ -81,7 +69,19 @@ export const sendBatchNative = async (
 				})
 			}
 			failed += chunk.length
+			continue
 		}
+
+		for (const r of result.data.results ?? []) {
+			// intentional fallback: results is optional in BatchSendSuccess
+			allResults.push({
+				index: offset + r.index,
+				recipient: r.recipient,
+				result: r.result as SendResult,
+			})
+		}
+		successful += result.data.successful
+		failed += result.data.failed
 	}
 
 	return {
