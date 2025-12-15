@@ -6,35 +6,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { createMemoryQueue } from '../queue/memory-queue.js'
-import type { EmailMessage, EmailProvider } from '../types/index.js'
+import type { EmailProvider } from '../types/index.js'
+import { createMockProvider, createTestMessage } from './helpers/test-utils.js'
 
-// Mock provider
-const createMockProvider = (
-	sendResult = {
-		success: true as const,
-		data: { id: 'msg_123', provider: 'mock', sentAt: new Date() },
-	},
-): EmailProvider => ({
-	name: 'mock',
-	send: vi.fn().mockResolvedValue(sendResult),
-	sendBatch: vi.fn().mockResolvedValue({
-		success: true,
-		data: { total: 1, successful: 1, failed: 0, results: [] },
-	}),
-	validateConfig: vi.fn().mockResolvedValue(true),
-})
-
-const createTestMessage = (
-	overrides: Partial<EmailMessage> = {},
-): EmailMessage => ({
-	from: 'sender@example.com',
-	to: 'recipient@example.com',
-	subject: 'Test Email',
-	html: '<h1>Hello</h1>',
-	...overrides,
-})
-
-// Mock logger
+// Mock logger - must be inline object, not function call (Vitest hoisting)
 vi.mock('../utils/logger.js', () => ({
 	queueLogger: {
 		info: vi.fn(),
