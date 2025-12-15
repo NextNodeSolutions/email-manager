@@ -1,41 +1,75 @@
 /**
- * Type definitions for the library
+ * Type definitions for @nextnode/email-manager
+ * Barrel export for all type definitions
  */
 
-/**
- * Configuration options for the client
- */
-export interface ClientConfig {
-  /** API key for authentication */
-  apiKey?: string
-  /** Base URL for API requests */
-  baseUrl?: string
-  /** Request timeout in milliseconds */
-  timeout?: number
-}
-
-/**
- * Response interface for API calls
- */
-export interface ApiResponse<T = unknown> {
-  /** Whether the request was successful */
-  success: boolean
-  /** Response data (if successful) */
-  data?: T
-  /** Error message (if failed) */
-  error?: string
-  /** HTTP status code */
-  statusCode: number
-}
-
-/**
- * Generic error interface
- */
-export interface LibraryError {
-  /** Error code */
-  code: string
-  /** Human-readable error message */
-  message: string
-  /** Optional error details */
-  details?: Record<string, unknown>
-}
+// Batch types
+export type {
+	BatchMode,
+	BatchOptions,
+	BatchOptionsBase,
+	NativeBatchOptions,
+	QueueBatchOptions,
+} from './batch.js'
+// Email types
+export type {
+	EmailAttachment,
+	EmailHeader,
+	EmailMessage,
+	EmailRecipient,
+	EmailTag,
+	EmailTemplateComponent,
+	TemplatedEmailMessage,
+} from './email.js'
+// Provider types (Strategy pattern)
+export type { EmailProvider, ProviderConfig } from './provider.js'
+// Queue types
+export type {
+	BatchCompleteSummary,
+	BatchProgressStats,
+	EmailQueue,
+	JobFilterOptions,
+	QueueBackendConfig,
+	QueueEventHandler,
+	QueueEventType,
+	QueueJob,
+	QueueJobStatus,
+	QueueOptions,
+	QueueStats,
+} from './queue.js'
+// Result types (discriminated unions)
+export type {
+	BatchSendResult,
+	BatchSendSuccess,
+	EmailError,
+	EmailErrorCode,
+	Result,
+	SendResult,
+	SendSuccess,
+} from './result.js'
+// Result factory functions
+export { emailError, emailFail, fail } from './result.js'
+// Template types
+export type { RenderedTemplate, TemplateRenderOptions } from './template.js'
+// Webhook types
+export type {
+	BounceInfo,
+	EmailBouncedEvent,
+	EmailClickedEvent,
+	EmailComplainedEvent,
+	EmailDeliveredEvent,
+	EmailDeliveryDelayedEvent,
+	EmailOpenedEvent,
+	EmailSentEvent,
+	TrackingEventData,
+	WebhookError,
+	WebhookErrorCode,
+	WebhookEvent,
+	WebhookEventBase,
+	WebhookEventData,
+	WebhookEventType,
+	WebhookHandler,
+	WebhookVerifyOptions,
+} from './webhook.js'
+// Webhook factory functions
+export { webhookError, webhookFail } from './webhook.js'

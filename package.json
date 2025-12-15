@@ -1,79 +1,100 @@
 {
-  "name": "@nextnode/email-manager",
-  "version": "1.0.0",
-  "description": "A TypeScript email management library providing unified email sending, template management, and comprehensive error handling for NextNode projects",
-  "keywords": [
-    "email",
-    "smtp",
-    "templates",
-    "nodemailer",
-    "typescript",
-    "nextnode",
-    "mail",
-    "messaging",
-    "notifications"
-  ],
-  "license": "MIT",
-  "author": "NextNodeSolutions",
-  "main": "./dist/index.js",
-  "scripts": {
-    "build": "tsc -p tsconfig.build.json && tsc-alias -p tsconfig.build.json",
-    "changeset": "changeset",
-    "changeset:publish": "changeset publish",
-    "changeset:version": "changeset version",
-    "clean": "rm -rf dist",
-    "commitlint": "commitlint --edit",
-    "format": "biome check --write --no-errors-on-unmatched .",
-    "lint": "eslint . --max-warnings 0 --fix",
-    "lint-staged": "lint-staged",
-    "prebuild": "pnpm clean",
-    "prepare": "husky",
-    "prepublishOnly": "pnpm build",
-    "test": "vitest run",
-    "test:coverage": "vitest run --coverage",
-    "test:ui": "vitest --ui",
-    "test:watch": "vitest",
-    "type-check": "tsc --noEmit"
-  },
-  "dependencies": {
-    "@nextnode/logger": "^0.2.4"
-  },
-  "devDependencies": {
-    "@biomejs/biome": "^2.2.3",
-    "@changesets/changelog-github": "^0.5.1",
-    "@changesets/cli": "^2.29.4",
-    "@commitlint/cli": "^19.2.1",
-    "@commitlint/config-conventional": "^19.1.0",
-    "@nextnode/eslint-plugin": "^1.2.0",
-    "@types/node": "^22.0.0",
-    "@vitest/coverage-v8": "^3.1.4",
-    "better-sort-package-json": "^1.1.1",
-    "eslint": "^9.27.0",
-    "husky": "^9.0.11",
-    "lint-staged": "^15.2.2",
-    "tsc-alias": "^1.8.16",
-    "typescript": "^5.0.0",
-    "vitest": "^3.1.4"
-  },
-  "peerDependencies": {
-    "eslint": "^9.22.0"
-  },
-  "engines": {
-    "node": ">=24.0.0"
-  },
-  "packageManager": "pnpm@10.11.0",
-  "type": "module",
-  "files": [
-    "CHANGELOG.md",
-    "README.md",
-    "dist/**/*"
-  ],
-  "exports": {
-    ".": {
-      "import": "./dist/index.js",
-      "types": "./dist/index.d.ts"
-    }
-  },
-  "module": "./dist/index.js",
-  "types": "./dist/index.d.ts"
+	"name": "@nextnode/email-manager",
+	"version": "1.0.0",
+	"description": "A TypeScript email management library providing unified email sending, template management, and comprehensive error handling for NextNode projects",
+	"keywords": [
+		"email",
+		"mail",
+		"messaging",
+		"nextnode",
+		"nodemailer",
+		"notifications",
+		"smtp",
+		"templates",
+		"typescript"
+	],
+	"homepage": "https://github.com/NextNodeSolutions/email-manager#readme",
+	"bugs": {
+		"url": "https://github.com/NextNodeSolutions/email-manager/issues"
+	},
+	"license": "MIT",
+	"author": "NextNodeSolutions",
+	"files": [
+		"CHANGELOG.md",
+		"README.md",
+		"dist/**/*"
+	],
+	"main": "./dist/index.js",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/NextNodeSolutions/email-manager.git"
+	},
+	"scripts": {
+		"prebuild": "pnpm clean",
+		"build": "tsc -p tsconfig.build.json && tsc-alias -p tsconfig.build.json",
+		"changeset": "changeset",
+		"changeset:publish": "changeset publish",
+		"changeset:version": "changeset version",
+		"clean": "rm -rf dist",
+		"commitlint": "commitlint --edit",
+		"format": "prettier --write .",
+		"lint": "biome check --write --no-errors-on-unmatched",
+		"lint-staged": "lint-staged",
+		"prepare": "husky",
+		"prepublishOnly": "pnpm build",
+		"test": "vitest run",
+		"test:coverage": "vitest run --coverage",
+		"test:ui": "vitest --ui",
+		"test:watch": "vitest",
+		"type-check": "tsc --noEmit"
+	},
+	"dependencies": {
+		"@nextnode/logger": "^0.3.0",
+		"@nextnode/validation": "^2.1.0",
+		"@react-email/render": "^2.0.0",
+		"env-paths": "^3.0.0",
+		"resend": "^6.6.0"
+	},
+	"devDependencies": {
+		"@biomejs/biome": "^2",
+		"@changesets/changelog-github": "^0.5.1",
+		"@changesets/cli": "^2.29.4",
+		"@commitlint/cli": "^19",
+		"@nextnode/standards": "^2",
+		"@types/node": "^22",
+		"@types/react": "^19",
+		"@vitest/coverage-v8": "^3",
+		"better-sort-package-json": "^1",
+		"husky": "^9",
+		"lint-staged": "^16",
+		"prettier": "^3",
+		"prettier-plugin-tailwindcss": "^0.7.2",
+		"react": "^19",
+		"tsc-alias": "^1",
+		"typescript": "^5",
+		"vitest": "^3"
+	},
+	"engines": {
+		"node": ">=24.0.0"
+	},
+	"packageManager": "pnpm@10.11.0",
+	"type": "module",
+	"exports": {
+		".": {
+			"import": "./dist/index.js",
+			"types": "./dist/index.d.ts"
+		}
+	},
+	"module": "./dist/index.js",
+	"pnpm": {
+		"onlyBuiltDependencies": [
+			"@biomejs/biome",
+			"esbuild",
+			"node",
+			"unrs-resolver"
+		],
+		"overrides": {}
+	},
+	"prettier": "@nextnode/standards/prettier",
+	"types": "./dist/index.d.ts"
 }

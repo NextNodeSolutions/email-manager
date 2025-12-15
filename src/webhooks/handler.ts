@@ -1,0 +1,219 @@
+/**
+ * Webhook handler
+ * Framework-agnostic webhook event handling
+ */
+
+import type {
+	EmailBouncedEvent,
+	EmailClickedEvent,
+	EmailComplainedEvent,
+	EmailDeliveredEvent,
+	EmailDeliveryDelayedEvent,
+	EmailOpenedEvent,
+	EmailSentEvent,
+	Result,
+	WebhookError,
+	WebhookEvent,
+	WebhookEventType,
+	WebhookHandler,
+} from '../types/index.js'
+import { webhookFail } from '../types/index.js'
+import { getErrorMessage } from '../utils/index.js'
+import { parseWebhookPayload, verifyWebhookSignature } from './parser.js'
+
+/**
+ * Webhook handler configuration
+ */
+export interface WebhookHandlerConfig {
+	/** Webhook signing secret */
+	secret: string
+	/** Verify signatures (recommended for production) */
+	verifySignature?: boolean
+	/** Signature tolerance in seconds */
+	signatureTolerance?: number
+}
+
+/**
+ * Type-safe handler map
+ */
+export interface WebhookHandlerMap {
+	'email.sent'?: WebhookHandler<EmailSentEvent>
+	'email.delivered'?: WebhookHandler<EmailDeliveredEvent>
+	'email.delivery_delayed'?: WebhookHandler<EmailDeliveryDelayedEvent>
+	'email.bounced'?: WebhookHandler<EmailBouncedEvent>
+	'email.complained'?: WebhookHandler<EmailComplainedEvent>
+	'email.opened'?: WebhookHandler<EmailOpenedEvent>
+	'email.clicked'?: WebhookHandler<EmailClickedEvent>
+}
+
+/**
+ * Process result
+ */
+export interface ProcessResult {
+	processed: boolean
+	event?: WebhookEvent | undefined
+}
+
+/**
+ * Webhook handler instance interface
+ */
+export interface WebhookHandlerInstance {
+	on: <K extends WebhookEventType>(
+		event: K,
+		handler: WebhookHandlerMap[K],
+	) => void
+	off: (event: WebhookEventType) => void
+	process: (
+		body: string,
+		signature?: string,
+	) => Promise<Result<ProcessResult, WebhookError>>
+	hasHandler: (event: WebhookEventType) => boolean
+	getRegisteredEvents: () => WebhookEventType[]
+}
+
+/**
+ * Verify webhook signature if enabled
+ * Returns error result if verification fails, null if ok or disabled
+ */
+const verifySignatureIfEnabled = (
+	verifySignature: boolean,
+	signature: string | undefined,
+	secret: string,
+	body: string,
+	tolerance: number,
+): { success: false; error: WebhookError } | null => {
+	if (!verifySignature) return null
+
+	if (!signature) {
+		return webhookFail('INVALID_SIGNATURE', 'Missing signature header')
+	}
+
+	const verifyResult = verifyWebhookSignature({
+		secret,
+		signature,
+		body,
+		tolerance,
+	})
+
+	if (!verifyResult.success) {
+		return verifyResult
+	}
+
+	return null
+}
+
+/**
+ * Create a webhook handler instance
+ *
+ * @param config - Handler configuration
+ * @returns Webhook handler with event registration and processing
+ *
+ * @example
+ * ```typescript
+ * const webhooks = createWebhookHandler({
+ *   secret: process.env.WEBHOOK_SECRET,
+ *   verifySignature: true
+ * })
+ *
+ * webhooks.on('email.delivered', async (event) => {
+ *   console.log('Email delivered:', event.data.email_id)
+ * })
+ *
+ * webhooks.on('email.bounced', async (event) => {
+ *   console.log('Email bounced:', event.data.bounce.type)
+ *   // Handle bounce - maybe unsubscribe the user
+ * })
+ *
+ * // In your route handler (any framework)
+ * const result = await webhooks.process(requestBody, signatureHeader)
+ * ```
+ */
+export const createWebhookHandler = (
+	config: WebhookHandlerConfig,
+): WebhookHandlerInstance => {
+	const handlers: WebhookHandlerMap = {}
+	const { secret, verifySignature = true, signatureTolerance = 300 } = config
+
+	/**
+	 * Register event handler
+	 */
+	const on = <K extends WebhookEventType>(
+		event: K,
+		handler: WebhookHandlerMap[K],
+	): void => {
+		// Type assertion needed due to TypeScript limitations with mapped types
+		handlers[event] = handler as WebhookHandlerMap[typeof event]
+	}
+
+	/**
+	 * Remove event handler
+	 */
+	const off = (event: WebhookEventType): void => {
+		delete handlers[event]
+	}
+
+	/**
+	 * Process incoming webhook
+	 *
+	 * @param body - Raw request body string
+	 * @param signature - Signature header value (optional if verification disabled)
+	 * @returns Result with processing status
+	 */
+	const process = async (
+		body: string,
+		signature?: string,
+	): Promise<Result<ProcessResult, WebhookError>> => {
+		// Verify signature if enabled
+		const signatureError = verifySignatureIfEnabled(
+			verifySignature,
+			signature,
+			secret,
+			body,
+			signatureTolerance,
+		)
+		if (signatureError) return signatureError
+
+		// Parse payload
+		const parseResult = parseWebhookPayload(body)
+		if (!parseResult.success) {
+			return parseResult as Result<never, WebhookError>
+		}
+
+		const event = parseResult.data
+		const handler = handlers[event.type] as
+			| WebhookHandler<WebhookEvent>
+			| undefined
+
+		if (!handler) {
+			return { success: true, data: { processed: false, event } }
+		}
+
+		try {
+			await handler(event)
+			return { success: true, data: { processed: true, event } }
+		} catch (error) {
+			const message = getErrorMessage(error, 'Handler error')
+			return webhookFail('HANDLER_ERROR', message)
+		}
+	}
+
+	/**
+	 * Check if a handler is registered for an event type
+	 */
+	const hasHandler = (event: WebhookEventType): boolean =>
+		handlers[event] !== undefined
+
+	/**
+	 * Get list of registered event types
+	 */
+	const getRegisteredEvents = (): WebhookEventType[] =>
+		Object.keys(handlers) as WebhookEventType[]
+
+	return {
+		on,
+		off,
+		process,
+		hasHandler,
+		getRegisteredEvents,
+	}
+}

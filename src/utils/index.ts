@@ -3,47 +3,54 @@
  */
 
 /**
- * Deep merge two objects
- * @param target - Target object
- * @param source - Source object
- * @returns Merged object
+ * Extract error message from unknown error
+ * Standardizes error message extraction across the codebase
+ *
+ * @param error - Unknown error value
+ * @param fallback - Fallback message if error is not an Error instance
+ * @returns Error message string
  */
-export const deepMerge = <T extends Record<string, unknown>>(
-  target: T,
-  source: Partial<T>
-): T => {
-  const result: Record<string, unknown> = { ...target }
-  
-  for (const key in source) {
-    const sourceValue = source[key]
-    const targetValue = result[key]
-    
-    if (isObject(sourceValue) && isObject(targetValue)) {
-      result[key] = deepMerge(
-        targetValue as Record<string, unknown>, 
-        sourceValue as Record<string, unknown>
-      )
-    } else if (sourceValue !== undefined) {
-      result[key] = sourceValue
-    }
-  }
-  
-  return result as T
-}
-
-/**
- * Check if value is a plain object
- * @param value - Value to check
- * @returns True if value is a plain object
- */
-export const isObject = (value: unknown): value is Record<string, unknown> => typeof value === 'object' && value !== null && !Array.isArray(value)
+export const getErrorMessage = (
+	error: unknown,
+	fallback = 'Unknown error',
+): string => (error instanceof Error ? error.message : fallback)
 
 /**
  * Delay execution for specified milliseconds
  * @param ms - Milliseconds to wait
  * @returns Promise that resolves after delay
  */
-export const delay = (ms: number): Promise<void> => new Promise(resolve => setTimeout(resolve, ms))
+export const delay = (ms: number): Promise<void> =>
+	new Promise(resolve => setTimeout(resolve, ms))
 
-// Export logger utilities
-export * from './logger.js'
+/**
+ * Calculate exponential backoff delay with jitter
+ * @param attempt - Current attempt number (1-based)
+ * @param retryDelay - Base retry delay in ms
+ * @param maxRetryDelay - Maximum retry delay in ms
+ * @returns Backoff delay in ms
+ */
+export const calculateBackoff = (
+	attempt: number,
+	retryDelay: number,
+	maxRetryDelay: number,
+): number => {
+	const baseDelay = retryDelay * 2 ** (attempt - 1)
+	// Add jitter (0-25% of delay)
+	const jitter = baseDelay * Math.random() * 0.25
+	return Math.min(baseDelay + jitter, maxRetryDelay)
+}
+
+/**
+ * Split an array into chunks of specified size
+ * @param array - Array to split
+ * @param size - Maximum size of each chunk
+ * @returns Array of chunks
+ */
+export const chunkArray = <T>(array: T[], size: number): T[][] => {
+	const chunks: T[][] = []
+	for (let i = 0; i < array.length; i += size) {
+		chunks.push(array.slice(i, i + size))
+	}
+	return chunks
+}
