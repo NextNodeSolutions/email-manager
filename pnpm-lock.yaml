@@ -4,9 +4,6 @@ settings:
     autoInstallPeers: true
     excludeLinksFromLockfile: false
 
-overrides:
-    '@nextnode/validation': link:../validation
-
 importers:
     .:
         dependencies:
@@ -14,8 +11,8 @@ importers:
                 specifier: ^0.3.0
                 version: 0.3.0(eslint@9.39.2(jiti@2.6.1))
             '@nextnode/validation':
-                specifier: link:../validation
-                version: link:../validation
+                specifier: ^2.1.0
+                version: 2.1.0(eslint@9.39.2(jiti@2.6.1))
             '@react-email/render':
                 specifier: ^2.0.0
                 version: 2.0.0(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
@@ -85,6 +82,18 @@ packages:
                 integrity: sha512-30iZtAPgz+LTIYoeivqYo853f02jBYSd5uGnGpkFV0M3xOt9aN73erkgYAmZU43x4VfqcnLxW9Kpg3R5LC4YYw==,
             }
         engines: { node: '>=6.0.0' }
+
+    '@ark/schema@0.56.0':
+        resolution:
+            {
+                integrity: sha512-ECg3hox/6Z/nLajxXqNhgPtNdHWC9zNsDyskwO28WinoFEnWow4IsERNz9AnXRhTZJnYIlAJ4uGn3nlLk65vZA==,
+            }
+
+    '@ark/util@0.56.0':
+        resolution:
+            {
+                integrity: sha512-BghfRC8b9pNs3vBoDJhcta0/c1J1rsoS1+HgVUreMFPdhz/CRAKReAu57YEllNaSy98rWAdY1gE+gFup7OXpgA==,
+            }
 
     '@babel/code-frame@7.27.1':
         resolution:
@@ -881,6 +890,27 @@ packages:
             vitest:
                 optional: true
 
+    '@nextnode/validation@2.1.0':
+        resolution:
+            {
+                integrity: sha512-OJbfOrDP54M5pcoTRnwpm0FSI1jzC8ZssAKFnsYNfJ0YzVcPnNSBdcRI+Myunrrw12NzV0G86FtvKh5boRo65w==,
+            }
+        engines: { node: '>=24.0.0' }
+        peerDependencies:
+            express: ^4.0.0 || ^5.0.0
+            fastify: ^4.0.0 || ^5.0.0
+            hono: ^4.0.0
+            react-hook-form: ^7.0.0
+        peerDependenciesMeta:
+            express:
+                optional: true
+            fastify:
+                optional: true
+            hono:
+                optional: true
+            react-hook-form:
+                optional: true
+
     '@nodelib/fs.scandir@2.1.5':
         resolution:
             {
@@ -1311,6 +1341,18 @@ packages:
         resolution:
             {
                 integrity: sha512-8+9WqebbFzpX9OR+Wa6O29asIogeRMzcGtAINdpMHHyAg10f05aSFVBbcEqGf/PXw1EjAZ+q2/bEBg3DvurK3Q==,
+            }
+
+    arkregex@0.0.5:
+        resolution:
+            {
+                integrity: sha512-ncYjBdLlh5/QnVsAA8De16Tc9EqmYM7y/WU9j+236KcyYNUXogpz3sC4ATIZYzzLxwI+0sEOaQLEmLmRleaEXw==,
+            }
+
+    arktype@2.1.29:
+        resolution:
+            {
+                integrity: sha512-jyfKk4xIOzvYNayqnD8ZJQqOwcrTOUbIU4293yrzAjA3O1dWh61j71ArMQ6tS/u4pD7vabSPe7nG3RCyoXW6RQ==,
             }
 
     array-ify@1.0.0:
@@ -3732,6 +3774,12 @@ snapshots:
             '@jridgewell/gen-mapping': 0.3.13
             '@jridgewell/trace-mapping': 0.3.31
 
+    '@ark/schema@0.56.0':
+        dependencies:
+            '@ark/util': 0.56.0
+
+    '@ark/util@0.56.0': {}
+
     '@babel/code-frame@7.27.1':
         dependencies:
             '@babel/helper-validator-identifier': 7.28.5
@@ -4257,6 +4305,13 @@ snapshots:
             vite: 7.2.7(@types/node@22.19.2)(jiti@2.6.1)(yaml@2.8.2)
             vitest: 3.2.4(@types/node@22.19.2)(jiti@2.6.1)(yaml@2.8.2)
 
+    '@nextnode/validation@2.1.0(eslint@9.39.2(jiti@2.6.1))':
+        dependencies:
+            '@nextnode/logger': 0.3.0(eslint@9.39.2(jiti@2.6.1))
+            arktype: 2.1.29
+        transitivePeerDependencies:
+            - eslint
+
     '@nodelib/fs.scandir@2.1.5':
         dependencies:
             '@nodelib/fs.stat': 2.0.5
@@ -4489,6 +4544,16 @@ snapshots:
             sprintf-js: 1.0.3
 
     argparse@2.0.1: {}
+
+    arkregex@0.0.5:
+        dependencies:
+            '@ark/util': 0.56.0
+
+    arktype@2.1.29:
+        dependencies:
+            '@ark/schema': 0.56.0
+            '@ark/util': 0.56.0
+            arkregex: 0.0.5
 
     array-ify@1.0.0: {}
 
