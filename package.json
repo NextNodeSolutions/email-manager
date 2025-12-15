@@ -1,6 +1,6 @@
 {
 	"name": "@nextnode/email-manager",
-	"version": "1.0.0",
+	"version": "2.0.0",
 	"description": "A TypeScript email management library providing unified email sending, template management, and comprehensive error handling for NextNode projects",
 	"keywords": [
 		"email",
