@@ -10,7 +10,7 @@
  */
 
 // Batch exports (for advanced usage)
-export { dispatchBatchStrategy } from './batch/index.js'
+export { dispatchBatchStrategy } from './batch/dispatcher.js'
 export type {
 	EmailManager,
 	EmailManagerConfig,

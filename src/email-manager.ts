@@ -3,7 +3,7 @@
  * Main facade for email operations - the primary public API
  */
 
-import { dispatchBatchStrategy } from './batch/index.js'
+import { dispatchBatchStrategy } from './batch/dispatcher.js'
 import { getGlobalRateLimiter } from './lib/rate-limiter.js'
 import type { ProviderConfigMap } from './providers/registry.js'
 import { createProvider, createProviderClient } from './providers/registry.js'

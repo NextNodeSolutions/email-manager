@@ -239,11 +239,11 @@ describe('sendBatchNative', () => {
 		expect(result.success).toBe(true)
 		if (result.success && result.data.results) {
 			// First chunk results: indices 0-99
-			expect(result.data.results[0].index).toBe(0)
-			expect(result.data.results[99].index).toBe(99)
+			expect(result.data.results[0]?.index).toBe(0)
+			expect(result.data.results[99]?.index).toBe(99)
 			// Second chunk results: indices 100-149
-			expect(result.data.results[100].index).toBe(100)
-			expect(result.data.results[149].index).toBe(149)
+			expect(result.data.results[100]?.index).toBe(100)
+			expect(result.data.results[149]?.index).toBe(149)
 		}
 	})
 
