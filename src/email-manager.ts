@@ -3,13 +3,14 @@
  * Main facade for email operations - the primary public API
  */
 
+import { dispatchBatchStrategy } from './batch/index.js'
 import { getGlobalRateLimiter } from './lib/rate-limiter.js'
 import type { ProviderConfigMap } from './providers/registry.js'
 import { createProvider, createProviderClient } from './providers/registry.js'
-import type { BatchOptions } from './queue/index.js'
-import { createEphemeralBatchQueue, createQueue } from './queue/index.js'
+import { createQueue } from './queue/index.js'
 import { renderTemplate } from './templates/renderer.js'
 import type {
+	BatchOptions,
 	BatchSendResult,
 	EmailMessage,
 	EmailProvider,
@@ -216,46 +217,7 @@ export const createEmailManager = <P extends keyof ProviderConfigMap>(
 		options: BatchOptions = {},
 	): Promise<BatchSendResult> => {
 		const finalMessages = messages.map(applyDefaults)
-
-		// Create ephemeral SQLite queue for this batch
-		const batchQueue = createEphemeralBatchQueue(provider, options)
-
-		try {
-			// Add all messages to the batch queue
-			await batchQueue.addBatch(finalMessages)
-
-			// Start processing
-			batchQueue.start()
-
-			// Wait for completion (with timeout from options or default)
-			const summary = await batchQueue.waitForCompletion(options.timeout)
-
-			return {
-				success: true,
-				data: {
-					total: summary.totalSent + summary.totalFailed,
-					successful: summary.totalSent,
-					failed: summary.totalFailed,
-					durationMs: summary.durationMs,
-				},
-			}
-		} catch (error) {
-			// Handle timeout or other errors
-			const errorMessage =
-				error instanceof Error ? error.message : 'Unknown batch error'
-
-			return {
-				success: false,
-				error: {
-					code: 'PROVIDER_ERROR',
-					message: errorMessage,
-					...(error instanceof Error && { cause: error }),
-				},
-			}
-		} finally {
-			// Always cleanup the ephemeral queue
-			await batchQueue.destroy()
-		}
+		return dispatchBatchStrategy(finalMessages, options, provider)
 	}
 
 	const enqueue = async (

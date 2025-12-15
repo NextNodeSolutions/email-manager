@@ -44,7 +44,7 @@ export const createQueue = (
 }
 
 export {
-	type BatchOptions,
 	createEphemeralBatchQueue,
 	type EphemeralBatchQueue,
 } from './ephemeral-batch-queue.js'
+// BatchOptions is now exported from types/batch.ts

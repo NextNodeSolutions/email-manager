@@ -25,3 +25,6 @@ export const QUEUE_DEFAULTS = {
 	/** Graceful shutdown timeout in milliseconds (30 seconds) */
 	gracefulShutdownTimeoutMs: 30_000,
 } as const
+
+/** Maximum emails per batch request (Resend API limit) */
+export const RESEND_MAX_BATCH_SIZE = 100

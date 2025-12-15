@@ -3,6 +3,14 @@
  * Barrel export for all type definitions
  */
 
+// Batch types
+export type {
+	BatchMode,
+	BatchOptions,
+	BatchOptionsBase,
+	NativeBatchOptions,
+	QueueBatchOptions,
+} from './batch.js'
 // Email types
 export type {
 	EmailAttachment,

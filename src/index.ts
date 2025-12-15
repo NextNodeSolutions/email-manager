@@ -9,6 +9,8 @@
  * - Framework-agnostic webhook handling
  */
 
+// Batch exports (for advanced usage)
+export { dispatchBatchStrategy } from './batch/index.js'
 export type {
 	EmailManager,
 	EmailManagerConfig,
@@ -35,7 +37,7 @@ export type {
 } from './providers/registry.js'
 // Provider exports (for advanced usage)
 export { createProvider } from './providers/registry.js'
-export type { BatchOptions, EphemeralBatchQueue } from './queue/index.js'
+export type { EphemeralBatchQueue } from './queue/index.js'
 // Queue exports (for advanced usage)
 export { createEphemeralBatchQueue } from './queue/index.js'
 // Template exports (for direct usage)
@@ -43,6 +45,9 @@ export { renderTemplate } from './templates/renderer.js'
 // Type exports
 export type {
 	BatchCompleteSummary,
+	BatchMode,
+	BatchOptions,
+	BatchOptionsBase,
 	BatchProgressStats,
 	BatchSendResult,
 	BatchSendSuccess,
@@ -66,7 +71,10 @@ export type {
 	EmailTag,
 	EmailTemplateComponent,
 	JobFilterOptions,
+	NativeBatchOptions,
 	QueueBackendConfig,
+	// Batch types
+	QueueBatchOptions,
 	QueueEventHandler,
 	QueueEventType,
 	// Queue types

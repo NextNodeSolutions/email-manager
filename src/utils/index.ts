@@ -40,3 +40,17 @@ export const calculateBackoff = (
 	const jitter = baseDelay * Math.random() * 0.25
 	return Math.min(baseDelay + jitter, maxRetryDelay)
 }
+
+/**
+ * Split an array into chunks of specified size
+ * @param array - Array to split
+ * @param size - Maximum size of each chunk
+ * @returns Array of chunks
+ */
+export const chunkArray = <T>(array: T[], size: number): T[][] => {
+	const chunks: T[][] = []
+	for (let i = 0; i < array.length; i += size) {
+		chunks.push(array.slice(i, i + size))
+	}
+	return chunks
+}

@@ -8,34 +8,14 @@ import { randomUUID } from 'node:crypto'
 import { QUEUE_DEFAULTS } from '../lib/constants.js'
 import type {
 	BatchCompleteSummary,
-	BatchProgressStats,
 	EmailMessage,
 	EmailProvider,
 	EmailQueue,
+	QueueBatchOptions,
 	QueueJob,
 } from '../types/index.js'
 import { queueLogger } from '../utils/logger.js'
 import { createSQLiteQueue } from './sqlite-queue.js'
-
-/**
- * Batch processing options (user-configurable)
- */
-export interface BatchOptions {
-	/** Max retry attempts per email */
-	maxRetries?: number
-	/** Max emails per second (provider rate limit protection) */
-	rateLimit?: number
-	/** Initial retry delay in milliseconds */
-	retryDelay?: number
-	/** Max retry delay in milliseconds */
-	maxRetryDelay?: number
-	/** Timeout for batch completion in milliseconds */
-	timeout?: number
-	/** Progress callback (called after each email completes) */
-	onProgress?: (stats: BatchProgressStats) => void
-	/** Completion callback (called when batch finishes) */
-	onComplete?: (summary: BatchCompleteSummary) => void
-}
 
 /**
  * Ephemeral batch queue interface
@@ -80,7 +60,7 @@ export interface EphemeralBatchQueue {
  */
 export const createEphemeralBatchQueue = (
 	provider: EmailProvider,
-	options: BatchOptions = {},
+	options: QueueBatchOptions = {},
 ): EphemeralBatchQueue => {
 	const batchId = randomUUID()
 	const dbKey = `batch-${batchId}`
