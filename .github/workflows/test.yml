@@ -14,5 +14,3 @@ jobs:
             run-tests: true
             run-build: true
             test-coverage: true
-            node-version: '24'
-            pnpm-version: '10.11.0'

@@ -18,7 +18,5 @@ jobs:
             pull-requests: write
             actions: read
         with:
-            node-version: '24'
-            pnpm-version: '10.11.0'
             version-script: 'changeset:version'
             auto-merge: true

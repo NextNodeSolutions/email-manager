@@ -21,8 +21,6 @@ jobs:
             actions: read
             packages: write
         with:
-            node-version: '24'
-            pnpm-version: '10.11.0'
             publish-script: 'changeset:publish'
             build-script: 'build'
             enable-provenance: true
