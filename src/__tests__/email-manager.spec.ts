@@ -239,7 +239,7 @@ describe('EmailManager', () => {
 			]
 
 			const result = await manager.sendBatch(messages, {
-				concurrency: 10,
+				rateLimit: 10,
 				timeout: 60_000,
 			})
 

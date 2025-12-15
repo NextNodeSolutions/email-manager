@@ -292,7 +292,7 @@ describe('SQLite Queue', () => {
 			const queue = createSQLiteQueue(
 				mockProvider,
 				{ backend: 'sqlite', appName: TEST_APP_NAME },
-				{ concurrency: 1 },
+				{ rateLimit: 10 },
 			)
 			const message = createTestMessage()
 
@@ -389,7 +389,7 @@ describe('SQLite Queue', () => {
 			const queue = createSQLiteQueue(
 				mockProvider,
 				{ backend: 'sqlite', appName: TEST_APP_NAME },
-				{ concurrency: 1, onProgress },
+				{ rateLimit: 10, onProgress },
 			)
 
 			await queue.addBatch([createTestMessage(), createTestMessage()])
@@ -406,7 +406,7 @@ describe('SQLite Queue', () => {
 			const queue = createSQLiteQueue(
 				mockProvider,
 				{ backend: 'sqlite', appName: TEST_APP_NAME },
-				{ concurrency: 2, onComplete },
+				{ rateLimit: 10, onComplete },
 			)
 
 			await queue.addBatch([createTestMessage(), createTestMessage()])

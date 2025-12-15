@@ -177,7 +177,7 @@ describe('Memory Queue', () => {
 
 	describe('Queue Processing', () => {
 		it('should process pending jobs when started', async () => {
-			const queue = createMemoryQueue(mockProvider, { concurrency: 1 })
+			const queue = createMemoryQueue(mockProvider, { rateLimit: 10 })
 			const message = createTestMessage()
 
 			await queue.add(message)
@@ -189,10 +189,8 @@ describe('Memory Queue', () => {
 			expect(mockProvider.send).toHaveBeenCalledWith(message)
 		})
 
-		it('should respect concurrency limit', async () => {
-			// This test verifies that the queue accepts concurrency configuration
-			// Actual concurrency behavior is timing-dependent and tested via integration tests
-			const queue = createMemoryQueue(mockProvider, { concurrency: 2 })
+		it('should process jobs sequentially', async () => {
+			const queue = createMemoryQueue(mockProvider, { rateLimit: 10 })
 
 			// Add jobs
 			await queue.add(createTestMessage())
